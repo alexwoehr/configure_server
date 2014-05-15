@@ -1,0 +1,13 @@
+
+Types of documentation:
+  - Code structure
+  - Code style
+  - Variable naming
+  - Function / object / script naming
+  - Inline comments
+  - Lengthy comments
+  - Headline comments
+  - Tutorial -- how to use
+  - Tutorial -- how to extend
+  - Tutorial -- how to build your own
+

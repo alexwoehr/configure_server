@@ -1,0 +1,21 @@
+
+- What's our core?
+  1: Relies on bash only. No other complicated stuff. Easy to install -- spin up a new, typical server, grab and untar the file, and go.
+  2: Plenty of interactive prompts, and clearly demarcate output, for ease of use.
+  3: Each section is thoroughly tested.
+  4: Each section is crossreferenced against standards (like NSA) and documented.
+  5: Prevent causing trouble (e.g., careful about configuration)
+  6: High standard of security
+  7: Offer sane defaults but allow to opt out of things. (Could interfere with testability, though.) It matches things the way that makes sense for us, without assuming you want maniacally detailed control. Doesn't try to be something it's not.
+  8: Should be based on a core of security values, resulting in security policies that we follow.
+
+- Compile full script from a list of miniscripts
+  - It really seems necessary, especially if script is to work on other environments.
+  - Basically, involves following:
+    ✓ Common, minimal stock of global configuration variables that we pull from
+    ✓ Common "local variables" specific to each individual script
+    - Set some basic parameters and it adds in extra interactivity. So we don't have extra junk all the time.
+    - Completing a run can generate a set of statements which can be used to run the file again.
+    - Tutorials and guides, leading a contributor through each stage of participation in the project
+    - There are tools and there are kits that pack tools together.
+

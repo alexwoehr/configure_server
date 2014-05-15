@@ -1,0 +1,39 @@
+# Technically this would be runnable except it's code
+# First, build all the file systems.
+mkfs.ext4 /dev/_DEVICE_ROOT2_1
+mkfs.ext4 /dev/_DEVICE_ROOT2_3
+mkfs.ext4 /dev/_DEVICE_ROOT2_4
+mkfs.ext4 /dev/_DEVICE_DATA1_1
+mkfs.ext4 /dev/_DEVICE_DATA1_2
+mkfs.ext4 /dev/_DEVICE_DATA1_3
+mkfs.ext4 /dev/_DEVICE_DATA1_4
+mkfs.ext4 /dev/_DEVICE_DATA1_5
+mkfs.ext4 /dev/_DEVICE_DATA1_6
+mkfs.ext4 /dev/_DEVICE_DATA1_7
+mkfs.ext4 /dev/_DEVICE_DATA1_8
+# Swap
+mkswap /dev/_DEVICE_ROOT2_2 && swapon /dev/_DEVICE_ROOT2_2 && swapon -s
+# Boot
+cp -rfax /boot{,.old} && mount -t ext4 /dev/_DEVICE_ROOT2_1 /boot && (cd /boot.old && ls -A /boot.old | xargs -I FILE -d"\n" cp -rfax FILE /boot) && chcon -t boot_t /boot
+# Var
+cp -rfax /var{,.old} && mount -t ext4 /dev/_DEVICE_DATA1_4 /var && (cd /var.old && ls -A /var.old | xargs -I FILE -d"\n" cp -rfax FILE /var) && chcon -t var_t /var
+# Var Log
+cp -rfax /var/log{,.old} && mount -t ext4 /dev/_DEVICE_DATA1_6 /var/log && (cd /var/log.old && ls -A /var/log.old | xargs -I FILE -d"\n" cp -rfax FILE /var/log) && chcon -t var_log_t /var/log
+# Var Tmp
+cp -rfax /var/tmp{,.old} && mount -t ext4 /dev/_DEVICE_DATA1_2 /var/tmp && chcon -t tmp_t /var/tmp && (cd /var/tmp.old && ls -A /var/tmp.old | xargs -I FILE -d"\n" cp -rfax FILE /var/tmp)
+chmod go+rwx /var/tmp && chattr +e /var/tmp && chmod +t /var/tmp
+# Var Log Audit
+cp -rfax /var/log/audit{,.old} && mount -t ext4 /dev/_DEVICE_ROOT2_4 /var/log/audit && (cd /var/log/audit.old && ls -A /var/log/audit.old | xargs -I FILE -d"\n" cp -rfax FILE /var/log/audit) && chcon -t auditd_log_t /var/log/audit
+# /tmp
+cp -rfax /tmp /tmp.old && mount -t ext4 /dev/_DEVICE_DATA1_1 /tmp && chcon -t tmp_t /tmp
+chmod go+rwx /tmp && chattr +e /tmp && chmod +t /tmp
+# /root/aide
+mkdir --parents /root/aide && chmod go-rwx /root/aide && mount -t ext4 /dev/_DEVICE_ROOT2_3 /root/aide && chcon -t aide_db_t /root/aide
+# /home
+cp -rfax /home /home.old && mount -t ext4 /dev/_DEVICE_DATA1_3 /home && (cd /home.old && ls -A /home.old | xargs -I FILE -d"\n" cp -rfax FILE /home) && chcon -t home_root_t /home
+# /srv
+mkdir --parents /srv && mount -t ext4 /dev/_DEVICE_DATA1_5 /srv && chcon -t httpd_sys_content_t /srv
+# /opt
+mkdir --parents /opt && mount -t ext4 /dev/_DEVICE_DATA1_7 /opt && chcon -t usr_t /opt
+# /chroot
+mkdir --parents /chroot && mount -t ext4 /dev/_DEVICE_DATA1_8 /chroot

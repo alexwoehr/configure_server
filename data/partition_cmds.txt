@@ -1,0 +1,18 @@
+select /dev/_DEVICE_ROOT2_
+mktable msdos
+unit gb
+mkpart primary 0 4
+mkpart primary 4 8
+mkpart primary 8 16
+mkpart primary 16 24
+select /dev/_DEVICE_DATA1_
+mktable gpt
+mkpart primary 0 64
+mkpart primary 64 128
+mkpart primary 128 192
+mkpart primary 192 256
+mkpart primary 256 768
+mkpart primary 768 832
+mkpart primary 832 896
+mkpart primary 896 960
+quit

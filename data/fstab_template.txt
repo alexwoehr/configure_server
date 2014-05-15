@@ -1,0 +1,17 @@
+# 3FOLD SETUP IS BELOW
+# (WARNING: DO NOT MOVE OR REMOVE COMMENT IN LINE ABOVE!)
+# /dev/_DEVICE_ROOT1_               /               ext4      defaults         1 1
+/dev/_DEVICE_ROOT2_1              /boot           ext4      defaults,nodev,nosuid         1 2
+/dev/_DEVICE_ROOT2_3              /root/aide      ext4      defaults,noexec,nodev,nosuid,ro      1 2
+/dev/_DEVICE_ROOT2_4              /var/log/audit  ext4      defaults,noexec,nodev,nosuid         1 2
+
+/dev/_DEVICE_DATA1_1              /tmp            ext4      defaults,noexec,nodev,nosuid         1 2
+/dev/_DEVICE_DATA1_2              /var/tmp        ext4      defaults,noexec,nodev,nosuid         1 2
+/dev/_DEVICE_DATA1_3              /home           ext4      defaults,nodev,nosuid                1 2
+/dev/_DEVICE_DATA1_4              /var            ext4      defaults,nosuid                      1 2
+/dev/_DEVICE_DATA1_5              /srv            ext4      defaults,nodev,nosuid                1 2
+/dev/_DEVICE_DATA1_6              /var/log        ext4      defaults,noexec,nodev,nosuid         1 2
+/dev/_DEVICE_DATA1_7              /opt            ext4      defaults,nodev,nosuid                1 2
+/dev/_DEVICE_DATA1_8              /chroot         ext4      defaults,nodev,nosuid                1 2
+
+/dev/_DEVICE_ROOT2_2              none            swap      defaults         0 0

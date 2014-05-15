@@ -1,0 +1,85 @@
+*filter
+:INPUT DROP [1:72]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+:Combined - [0:0]
+
+# Following rules are only necessary if you enable FTP access.
+# Rules to execute before FWSNORT
+--append INPUT --protocol tcp --dport 20 --match state --state ESTABLISHED --jump ACCEPT
+--append INPUT --protocol tcp --dport 49152:65535 --match state --state ESTABLISHED --jump ACCEPT
+
+#### INSERT FWSNORT_INPUT HERE ####
+
+# Catch spoofing from "weird" addresses
+--append INPUT ! --in-interface lo --source 172.16.0.0/12 --match limit --limit 1/second --jump LOG --log-prefix "IP DROP LO SPOOF A: "
+--append INPUT ! --in-interface lo --source 172.16.0.0/12 --jump DROP
+--append INPUT ! --in-interface lo --source 192.168.0.0/16 --match limit --limit 1/second --jump LOG --log-prefix "IP DROP LO SPOOF B: "
+--append INPUT ! --in-interface lo --source 192.168.0.0/16 --jump DROP
+--append INPUT ! --in-interface lo --source 224.0.0.0/4 --match limit --limit 1/second --jump LOG --log-prefix "IP DROP LO MULTICAST C: "
+--append INPUT ! --in-interface lo --source 224.0.0.0/4 --jump DROP
+--append INPUT ! --in-interface lo --source 240.0.0.0/5 --jump LOG --log-prefix "IP DROP LO SPOOF D: "
+--append INPUT ! --in-interface lo --source 240.0.0.0/5 --jump DROP
+--append INPUT ! --in-interface lo --destination 127.0.0.0/8 --match limit --limit 1/second --jump LOG --log-prefix "IP DROP LO LOOPBACK: "
+--append INPUT ! --in-interface lo --destination 127.0.0.0/8 --jump DROP
+## # You should change ethX to the interface for your local network.
+## # IMPORTANT: disable/comment these lines if you have a local network. On Amazon EC2 we don't, but VPC would be a different matter!
+## --append INPUT ! --in-interface ethX --source 10.0.0.0/8 --match limit --limit 1/second --jump LOG --log-prefix "IP DROP LAN SPOOF E: "
+## --append INPUT ! --in-interface ethX --source 10.0.0.0/8 --jump DROP
+
+# Do not allow fowarding, so we drop packets not destined for our IP
+# Sensitive; take care when we test this one. Still not made up if it's good or not
+# --append INPUT ! --in-interface lo ! -- source 10.0.16.194 --jump LOG --log-prefix "FORWARDED: "
+
+# Invalid junk-packets
+--append INPUT --match state --state INVALID --match limit --limit 1/second --jump LOG --log-prefix "IPTABLES: DROP INVALID " --log-ip-options --log-tcp-options
+--append INPUT --match state --state INVALID --jump DROP
+
+# Accept existing lines of traffic (so we can receive responses to outgoing traffic)
+--append INPUT --match state --state RELATED,ESTABLISHED --jump ACCEPT
+
+# Accept traffic from localhost interface and local VLAN.
+--append INPUT --in-interface lo --jump ACCEPT
+
+# Accept:
+# 
+# ICMP: Allow most ICMP packets to be received (so people can check our presence), but restrict the flow to avoid ping flood attacks
+--append INPUT --protocol icmp --match icmp --icmp-type address-mask-request --jump DROP
+--append INPUT --protocol icmp --match icmp --icmp-type timestamp-request --jump DROP
+--append INPUT --protocol icmp --match limit --limit 1/second --jump ACCEPT
+# just drop the "extra" ICMP packets without logging; not worth it to log excessive ICMP
+--append INPUT --protocol icmp --match icmp --jump DROP
+# 
+# TCP
+# - FTP
+--append INPUT --protocol tcp --match tcp --dport 21 --jump ACCEPT
+# - SSH
+--append INPUT --protocol tcp --match tcp --dport 22 --jump ACCEPT
+# - HTTP
+--append INPUT --protocol tcp --match tcp --dport 80 --jump ACCEPT
+# - HTTPS
+--append INPUT --protocol tcp --match tcp --dport 443 --jump ACCEPT
+# - nrpe: only accept from nagios server. Enable when we launch nagios. (Nagios remote plugin executor)
+--append INPUT --protocol tcp --match tcp --dport 5666 --source 71.19.154.48 --jump ACCEPT
+#
+# More necessary FTP stuff.
+#
+# Allow Active FTP Connections
+--append INPUT --protocol tcp --sport 20 --match state --state ESTABLISHED,RELATED --jump ACCEPT
+--append OUTPUT --protocol tcp --dport 20 --match state --state ESTABLISHED --jump ACCEPT
+
+# Allow Passive FTP Connections in IANA ephemeral port space
+--append INPUT --protocol tcp --sport 49152:65534 --dport 49152:65534 --match state --state ESTABLISHED --jump ACCEPT
+--append OUTPUT --protocol tcp --sport 49152:65534 --dport 49152:65534 --match state --state ESTABLISHED,RELATED --jump ACCEPT
+
+# OUTPUT RULES
+#
+# Summary: we accept most output, but we do log invalid packets as that's a pretty bad sign.
+#
+# Invalid junk
+--append OUTPUT --match state --state INVALID --match limit --limit 1/second --jump LOG --log-prefix "IPTABLES: OUT: DROP INVALID " --log-ip-options --log-tcp-options
+--append OUTPUT --match state --state INVALID --jump DROP
+# Accept all other outgoing stuff. (May need to revise this.)
+--append OUTPUT --jump ACCEPT
+COMMIT
+# Modified / tested on Monday March 10 8:39:19 2014

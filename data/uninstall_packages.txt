@@ -1,0 +1,18 @@
+inetd
+xinetd
+telnet-server
+telnet
+# krb5-workstation
+rsh-server
+rsh
+ypbind
+ypserv
+tftp-server
+talk-server
+talk
+isdn4k-utils
+kdump
+kudzu
+mdmonitor
+microcode_ctl
+irda-utils
