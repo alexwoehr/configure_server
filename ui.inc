@@ -11,7 +11,7 @@ ui_press_any_key() {
 # Description: announce a new section to the user. Request clearance to proceed.
 # 
 ui_section() {
-  readonly title="$1" && shift
+  title="$1" && shift
   echo
   echo "-----------------------"
   echo "--"
@@ -24,14 +24,17 @@ ui_section() {
 }
 
 ui_start_task() {
-  readonly title="$1" && shift
+  title="$1"
+  shift
+  echo "=============================================="
   echo "... Begin: $title ..."
 
   ui_press_any_key
 }
 
 ui_end_task() {
-  readonly title="$1" && shift
+  title="$1"
+  shift
   echo "... Done: $title."
 
   ui_press_any_key
@@ -42,7 +45,7 @@ ui_end_task() {
 
 ui_escape_output() {
   # Pipe stdin into sed and prepend escape
-  readonly cmd="$1" && shift
+  cmd="$1" && shift
   cat | sed "s/^/[$cmd says] /"
 }
 
@@ -50,7 +53,7 @@ ui_escape_output() {
 # Description: Display a conclusion
 
 ui_print_note() {
-  readonly note="$1" && shift
+  note="$1" && shift
   echo --- "$note"
 }
 
@@ -59,8 +62,10 @@ ui_print_note() {
 
 ui_proceed() {
   local choice;
-  readonly task="$1" && shift
-  readonly default_choice="$1" && shift
+  task="$1"
+  shift
+  default_choice="$1"
+  shift
   echo ">>> Proceed with task: $task? y/n [$default_choice]"
   read choice
   if [[ -z $proceed ]]; then
@@ -72,9 +77,11 @@ ui_proceed() {
 
 ui_prompt() {
   local choice;
-  readonly prompt="$1" && shift
-  readonly options="$1" && shift
-  readonly default_choice="$1" && shift
+  prompt="$1"
+  shift
+  options="$1"
+  shift
+  default_choice="$1" && shift
   echo ">>>" "$prompt" "[$options]"
   read choice
   if [[ -z $proceed ]]; then
