@@ -41,9 +41,9 @@ ui_end_task "$task"
 
 task="Build our own, new kernel package..."
 ui_start_task "$task"
-  ui_note "Step 1: mkinitrd"
+  ui_print_note "Step 1: mkinitrd"
   /sbin/new-kernel-pkg --package kernel --mkinitrd --make-default --dracut --depmod --install `uname --kernel-release`
-  ui_note "Step 2: rpm post hook"
+  ui_print_note "Step 2: rpm post hook"
   /sbin/new-kernel-pkg --package kernel --rpmposttrans 3.10.48-55.140.amzn1.x86_64
 ui_end_task "$task"
 
