@@ -1,23 +1,62 @@
 
-echo "Installing basic packages..."
-yum --assumeyes install screen lftp lsof atop tcpdump pv wget atop \
-| sed 's/.*/[yum says] \0/'
-echo "Installing selinux packages..."
-yum --assumeyes install checkpolicy libsel* sel* {libselinux{,-utils},libsetools,selinux-policy-{minimum,mls,targeted},policycoreutils,binutils,setools{,-console}}{,-devel} \
-| sed 's/.*/[yum says] \0/'
-echo "Adding SELinux enforcement in grub..."
-for file in /etc/grub.conf /boot/grub/grub.conf /boot/grub/menu.lst; do
-  sed --in-place "s/^kernel .boot.vmlinuz-.*/\0 selinux=1 security=selinux enforcing=1/" "$file"
-done
-echo "Now updating all packages..."
-yum --assumeyes update
-echo "Build our own, new kernel package..."
-/sbin/new-kernel-pkg --package kernel --mkinitrd --make-default --dracut --depmod --install `uname -r`
+source ui.inc
 
-echo 'Rebuilding SELinux policy...'
-semodule --noreload --build
+#######################################
+#
+#
+ui_section "Install Dependencies"
 
-echo "Relabel root filesystem at next reboot..."
-touch /.autorelabel
+item="basic packages"
+task="Installing $item"
+ui_start_task "$task"
+  ####    yum --assumeyes install screen lftp lsof atop tcpdump pv wget atop git \
+  ####    | ui_escape_output yum
+ui_end_task "$task"
 
-echo "Friend, it's time to reboot!"
+item="SELinux packages"
+task="Installing $item"
+ui_start_task "$task"
+  ####    yum --assumeyes install checkpolicy libsel* sel* {libselinux{,-utils},libsetools,selinux-policy-{minimum,mls,targeted},policycoreutils,binutils,setools{,-console}}{,-devel} \
+  ####    | ui_escape_output yum
+ui_end_task "$task"
+
+#######################################
+#
+#
+ui_section "Rebuild Kernel"
+
+task="Enforce SELinux in Grub"
+ui_start_task "$task"
+  for file in /etc/grub.conf /boot/grub/grub.conf /boot/grub/menu.lst; do
+    ####    sed --in-place "s/^kernel .boot.vmlinuz-.*/\0 selinux=1 security=selinux enforcing=1/" "$file"
+    ui_print_note "Added enforcements in $file"
+  done
+ui_end_task "$task"
+
+task="Update any packages as necessary"
+ui_start_task "$task"
+  ####    yum --assumeyes update \
+  ####    | ui_escape_output yum
+ui_end_task "$task"
+
+task="Build our own, new kernel package..."
+ui_start_task "$task"
+  ####    /sbin/new-kernel-pkg --package kernel --mkinitrd --make-default --dracut --depmod --install `uname --kernel-release`
+ui_end_task "$task"
+
+task="Rebuild SELinux policy"
+ui_start_task "$task"
+  ####    semodule --noreload --build
+ui_end_task "$task"
+
+#######################################
+#
+#
+ui_section "Prepare for Reboot"
+
+task="Relabel root filesystem at next reboot..."
+ui_start_task "$task"
+  ####    touch /.autorelabel
+ui_end_task "$task"
+
+ui_print_note "Friend, it's time to reboot!"
