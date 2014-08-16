@@ -732,7 +732,7 @@ else
 
         # Append to undo file
         >> $UNDO_FILE echo   "echo 'Re-adding removed console $item...' "
-        >> $UNDO_FILE echo ">> '$checkfile' echo '$item'"
+        >> $UNDO_FILE echo ">> '$modfile' echo '$item'"
         ui_print_note "* Wrote undo file."
       else
         ui_print_note "* OK, no action taken on $item"
@@ -753,10 +753,6 @@ else
   fi
 
 fi
-
-# this is how far we got
-exit 255
-
 
 # NSA 2.3.1.2 Limit su Access to the Root Account
 # SECTION
@@ -792,6 +788,10 @@ if [ ! -s $SCRATCH ]; then
 else
   echo "No changes necessary."
 fi
+
+# this is how far we got
+exit 255
+
 
 # BASED ON SECTION TEMPLATE 0.2
 # - 
