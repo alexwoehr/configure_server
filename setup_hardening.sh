@@ -99,15 +99,17 @@ fi
 ui_section "Remove Extra FS Types"
 modfile="/etc/modprobe.d/configure_server.exclusions.modprobe.conf"
 modflag="configure_server directive 2.2.1"
-if [ ! -s <( grep "$modflag"$ "$modfile" ) ]; then
+# Check whether this flag has been applied yet
+if [ 0 '<' $( grep "$modflag"$ "$modfile" | wc -l) ]; then
   source <( 
     ui_prompt_macro "This task has not been done yet. Proceed? [y/N]" proceed n
   )
+
   if [[ "$proceed" == "y" ]]; then
 
     # Save old file
     source <(
-      fn_backup_config_file_macro "$modfile" modfile_saveafter_callback
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
     )
 
     for fs in usb-storage {cram,freevx,h,squash}fs jffs2 hfsplus udf; do
@@ -116,7 +118,7 @@ if [ ! -s <( grep "$modflag"$ "$modfile" ) ]; then
       ui_print_note "Removed unnecessary fs: $fs"
     done
 
-    modfile_saveafter_callback
+    modfile_saveAfter_callback
 
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
