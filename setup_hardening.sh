@@ -1,6 +1,7 @@
 #!/bin/sh
 
 source ./ui.inc
+source ./functions.inc
 
 ui_section "WELCOME TO SECURITY HARDENING SCRIPT"
 
@@ -55,8 +56,8 @@ sestatus \
 | ui_highlight '(en|dis)abled' --extended-regexp \
 | ui_escape_output "sestatus"
 
-# Check if it's disabled
-if getenforce | awk '/Disabled/ { exit 0 }'; then
+if ! fn_selinux_enabled; then
+  ui_print_note "setup_hardening assumes that you use SELinux."
   ui_print_note "Please setup SELINUX on your own."
   ui_print_note "Quit script? [y/N]"
   read proceed
@@ -69,14 +70,11 @@ else
   ui_print_note "No changes necessary."
 fi
 
-# this is how far we got
-exit 255
-
 ui_section "Runtime Environment & Directories"
 modflag="configure_server create standard directories"
 echo "Create our standard directories? [y/N]"
 read proceed
-if [[ $proceed == "y" ]]; then
+if [[ "$proceed" == "y" ]]; then
   # TODO: move list of dirs into separate data file and have interactive confirmation of each dir
   # Default location to chroot users and others into
   dir="/chroot/nowhere"
@@ -89,6 +87,9 @@ if [[ $proceed == "y" ]]; then
 else
   echo "OK, no changes made."
 fi
+
+# this is how far we got
+exit 255
 
 # NSA 2.2.1 Remove Extra FS
 # SECTION
