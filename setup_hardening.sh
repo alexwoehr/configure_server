@@ -181,10 +181,11 @@ if [ ! -s $results_file ]; then
 else
 
   source <(
-    ui_prompt_macro "World-writable directories were found. Would you like to fix them interactively? [y/N/f] \n(y = Yes, n = No, f = Force)" proceed n
+    ui_prompt_macro "World-writable directories were found. Would you like to fix them interactively? [y/N/f]
+(y = Yes, n = No, f = Force)" proceed n
   )
 
-  if [ "$proceed" == "y" ]; then
+  if [ "$proceed" == "y" -o "$proceed" == "f" ]; then
     # Initiate interactive mode
     ui_start_task "Interactive world-writable fix"
     for dir in `cat $results_file`; do
