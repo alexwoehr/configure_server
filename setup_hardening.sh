@@ -158,7 +158,7 @@ modflag="configure_server directive 2.2.2.2"
 
 ui_start_task "Check for world writable directories"
 
-# Create a results file to browse
+# Create a results file to work through
 results_file="$TMP_DIR/NSA.2.2.2.2.world_writable_dirs.txt"
 > $results_file
 
@@ -202,7 +202,7 @@ else
       fi
 
       if [ "$proceed2" == "y" ]; then
-        ui_print_note "Setting sticky bit on $dir..."
+        ui_print_note "* Setting sticky bit on $dir..."
         chmod +t "$dir"
         ls -dlh "$dir" | ui_escape_output ls
         (( ++ACTIONS_COUNTER ))
@@ -212,7 +212,7 @@ else
         >> $UNDO_FILE echo "chmod -t '$dir'"
         ui_print_note "* Wrote undo file."
       else
-        ui_print_note "* OK, no action taken"
+        ui_print_note "* OK, no action taken on $dir"
       fi
 
     done
@@ -277,7 +277,7 @@ else
       fi
 
       if [ "$proceed2" == "y" ]; then
-        ui_print_note "Setting sticky bit on $file"
+        ui_print_note "* Clearing world-writable permission on $file"
         chmod o-w "$file"
         ls -lh "$file" | ui_escape_output ls
         (( ++ACTIONS_COUNTER ))
@@ -287,7 +287,7 @@ else
         >> $UNDO_FILE echo "chmod o+w '$file'"
         ui_print_note "* Wrote undo file."
       else
-        ui_print_note "* OK, no action taken"
+        ui_print_note "* OK, no action taken on $file"
       fi
 
     done
@@ -298,50 +298,87 @@ else
   fi
 fi
 
-# this is how far we got
-exit 255
-
 # NSA 2.2.2.3 SUID / SGID permissions
 # SECTION
 # - TESTING:
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Fix SUID Executables"
-echo "------------------------------"
+ui_section "Fix SUID and SGID Executables"
+
+ui_start_task "Check for unexpected setuid files"
+
 modfile=""
 modflag="configure_server directive 2.2.2.3A"
+
+# Create a results file to work through
 results_file="$TMP_DIR/NSA.2.2.2.4.suid.txt"
 > $results_file
-for PART in $PARTITIONS; do
-  find $PART -xdev \( -perm -4000 \) -type f -print
-done | grep --invert-match --file="$DATA_DIR/suid_files_allow.txt" >> $results_file
-# Do not test /chroot jails
-sed --in-place "/^\\/chroot\\//d" "$results_file"
+
+find_suid_files() {
+  local readonly setuidPermissions="-4000"
+  local PART
+  for PART in $PARTITIONS; do
+    find $PART -xdev \( -perm $setuidPermissions \) -type f -print
+  done \
+  | grep --invert-match --file="$DATA_DIR/suid_files_allow.txt" \
+  | cat >> $results_file
+
+  # Omit /chroot jails
+  sed --in-place "/^\\/chroot\\//d" "$results_file"
+}
+find_suid_files
+
+ui_end_task "Check for unexpected setuid files"
 
 # Interactive part
-if [[ ! -s $results_file ]]; then
+if [ ! -s "$results_file" ]; then
   echo "No results."
+  ui_print_note "No offending directories found."
+  ui_print_note "Nothing to do."
 else
-  for file in `cat "$results_file"`; do
-    echo "Clear setuid on $file? [y/N]"
-    read proceed
-    if [[ $proceed == "y" ]]; then
-      echo "Performing operation..."
-      chmod u-s "$file"
-      (( ++ACTIONS_COUNTER ))
-      >> "$ACTIONS_TAKEN_FILE" echo $modflag
-      # Append to undo file
-      >> $UNDO_FILE echo "echo 'Undoing suid removal on $file...' "
-      >> $UNDO_FILE echo "chmod u+s '$file'"
-      echo "Wrote to undo file."
-    else
-      echo "Skipped $file."
-    fi
-  done
+  source <(
+    ui_prompt_macro "Unexpected setuid files were found. Would you like to review them interactively? [y/N/f]
+(y = Yes, n = No, f = Force)" proceed n
+  )
+
+  if [ "$proceed" == "y" -o "$proceed" == "f" ]; then
+    # Initiate interactive mode
+    ui_start_task "Interactive setuid fix"
+    for file in `cat "$results_file"`; do
+      # Check for "force" mode
+      if [ "$proceed" != "f" ]; then
+        source <(
+          ui_prompt_macro "* Clear setuid permission on $file? [y/N]" proceed2 n
+        )
+      else
+        # we're in "force" mode, should use y for everything
+        proceed2="y" # force to y for all of them
+      fi
+
+      if [ "$proceed2" == "y" ]; then
+        ui_print_note "* Clearing setuid permission on $file..."
+        chmod u-s "$file"
+        (( ++ACTIONS_COUNTER ))
+        >> "$ACTIONS_TAKEN_FILE" echo $modflag
+        # Append to undo file
+        >> $UNDO_FILE echo "echo 'Undoing suid removal on $file...' "
+        >> $UNDO_FILE echo "chmod u+s '$file'"
+        ui_print_note "* Wrote to undo file."
+      else
+        ui_print_note "* OK, no action taken on $file"
+      fi
+
+    done
+    ui_end_task "Interactive setuid fix"
+
+  else
+    ui_print_note "OK, skipping fixes."
+  fi
 fi
+
+# this is how far we got
+exit 255
 
 # SECTION
 # - TESTING:
