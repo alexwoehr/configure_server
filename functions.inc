@@ -30,7 +30,7 @@ fn_backup_config_file_macro() {
       $callback_name() {
         cp "$modfile" "$modfile_new_bak"
       }
-    END_MACRO
+END_MACRO
   fi
 }
 
