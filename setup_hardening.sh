@@ -277,9 +277,9 @@ else
       fi
 
       if [ "$proceed2" == "y" ]; then
-        ui_print_note "Setting sticky bit on $dir..."
+        ui_print_note "Setting sticky bit on $file"
         chmod o-w "$file"
-        ls -lh "$dir" | ui_escape_output ls
+        ls -lh "$file" | ui_escape_output ls
         (( ++ACTIONS_COUNTER ))
         >> "$ACTIONS_TAKEN_FILE" echo $modflag
         # Append to undo file
