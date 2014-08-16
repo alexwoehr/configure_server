@@ -105,7 +105,7 @@ if [ 0 == $( grep "$modflag"$ "$modfile" | wc -l) ]; then
     ui_prompt_macro "This task has not been done yet. Proceed? [y/N]" proceed n
   )
 
-  if [[ "$proceed" == "y" ]]; then
+  if [ "$proceed" == "y" ]; then
 
     # Save old file
     source <(
@@ -496,50 +496,50 @@ else
   ui_print_note "Already done. No action taken."
 fi
 
-# this is how far we got
-exit 255
-
 # NSA 2.2.4.2 Disable Core Dumps
 # SECTION
 # - TESTING:
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Disable Core Dumps"
-echo "------------------------------"
+ui_section "Disable Core Dumps"
+
 modfile="/etc/security/limits.conf"
 modflag="configure_server directive 2.2.4.2A"
-cat "$modfile" \
-| grep "$modflag"$ \
-| tee $SCRATCH \
-&& if [ ! -s $SCRATCH ]; then
-  echo "Disable core dumps in $modfile? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
+
+# Check whether this flag has been applied yet
+if [ 0 == $( grep "$modflag"$ "$modfile" | wc -l) ]; then
+  source <( 
+    ui_prompt_macro "This task has not been done yet. Proceed to disable core dumps in $modfile? [y/N]" proceed n
+  )
+
+  if [ "$proceed" == "y" ]; then
     # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
-    echo "Performing operation on $modfile..."
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    ui_print_note "Disabling core dumps via $modfile..."
     >> $modfile echo "# $modflag"
     >> $modfile echo "*        hard core 0"
+
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Undoing core dump disablement on limits.conf...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-    echo "Wrote to undo file."
+    ui_print_note "Wrote undo file."
   else
-    echo "OK, no action taken"
+    ui_print_note "OK, did not proceed."
   fi
 else
-  echo "Already done. No action taken."
+  ui_print_note "Already done. No action taken."
 fi
+
+# this is how far we got
+exit 255
 
 modfile="/etc/sysctl.conf"
 modflag="configure_server directive 2.2.4.2B"
