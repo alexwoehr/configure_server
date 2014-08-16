@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Setup Variables for setup scripts.
 # This is an include, so we basically run silent.
