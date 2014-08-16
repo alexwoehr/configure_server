@@ -679,7 +679,7 @@ cat "$modfile" \
   > "$SCRATCH"
 
 if [ 0 '==' $(wc -l "$SCRATCH") ]; then 
-  ui_print_note "No dangerous files found."
+  ui_print_note "No unexpected terminals found."
   ui_print_note "Nothing to do."
 else
   ui_print_note "The following extraneous consoles have been discovered:"
@@ -751,8 +751,6 @@ else
     ui_print_note "OK, did not proceed."
   fi
 
-else
-  ui_print_note "No changes necessary."
 fi
 
 # this is how far we got
