@@ -27,7 +27,10 @@ fn_backup_config_file_macro() {
     local readonly modfile_new_bak="$modfile".save-after-`date +%F`
     # Send it on standard out
     cat - <<-END_MACRO
-      set "$callback_name"='cp "$modfile" "$modfile_new_bak"'
+      $callback_name() {
+        cp "$modfile" "$modfile_new_bak"
+      }
+    END_MACRO
   fi
 }
 
