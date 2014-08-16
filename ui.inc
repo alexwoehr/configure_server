@@ -93,3 +93,11 @@ ui_prompt() {
   echo "<<< OK, using $choice"
 }
 
+# Uses grep to highlight
+ui_highlight() {
+  local readonly expression="$1"
+  shift
+  cat - \
+  | grep --color=always --regexp="$expression" "$@"
+}
+
