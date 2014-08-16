@@ -678,7 +678,7 @@ cat "$modfile" \
 | grep --invert-match --extended-regexp --file="$DATA_DIR/securetty_allowed.txt" \
   > "$SCRATCH"
 
-if [ 0 '==' $(wc -l "$SCRATCH") ]; then 
+if [ 0 '==' $(wc -l < "$SCRATCH") ]; then 
   ui_print_note "No unexpected terminals found."
   ui_print_note "Nothing to do."
 else
