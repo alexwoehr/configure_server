@@ -719,12 +719,9 @@ else
         local file="$1"
         local search="$2"
         cat "$file" \
-        # Get list of line numbers
         | grep --line-number --fixed-strings "$search" \
         | cut -f1 -d: \
-        # add "d" command after the line number
         | sed --in-place 's/$/d/' \
-        # reverse to ensure we delete in correct order
         | tac
       }
 
