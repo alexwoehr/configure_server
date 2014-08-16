@@ -100,7 +100,7 @@ ui_section "Remove Extra FS Types"
 modfile="/etc/modprobe.d/configure_server.exclusions.modprobe.conf"
 modflag="configure_server directive 2.2.1"
 # Check whether this flag has been applied yet
-if [ 0 '<' $( grep "$modflag"$ "$modfile" | wc -l) ]; then
+if [ 0 == $( grep "$modflag"$ "$modfile" | wc -l) ]; then
   source <( 
     ui_prompt_macro "This task has not been done yet. Proceed? [y/N]" proceed n
   )
