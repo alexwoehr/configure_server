@@ -304,7 +304,7 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-ui_section "Fix SUID and SGID Executables"
+ui_section "Fix SUID Executables"
 
 ui_start_task "Check for unexpected setuid files"
 
@@ -333,8 +333,7 @@ ui_end_task "Check for unexpected setuid files"
 
 # Interactive part
 if [ ! -s "$results_file" ]; then
-  echo "No results."
-  ui_print_note "No offending directories found."
+  ui_print_note "No dangerous files found."
   ui_print_note "Nothing to do."
 else
   source <(
@@ -364,7 +363,7 @@ else
         # Append to undo file
         >> $UNDO_FILE echo "echo 'Undoing suid removal on $file...' "
         >> $UNDO_FILE echo "chmod u+s '$file'"
-        ui_print_note "* Wrote to undo file."
+        ui_print_note "* Wrote undo file."
       else
         ui_print_note "* OK, no action taken on $file"
       fi
@@ -377,49 +376,83 @@ else
   fi
 fi
 
-# this is how far we got
-exit 255
-
 # SECTION
 # - TESTING:
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Fix SGID Executables"
-echo "------------------------------"
+ui_section "Fix SGID Executables"
+
+ui_start_task "Check for unexpected setuid files"
+
 modflag="configure_server directive 2.2.2.3B"
+
+# Create a results file to work through
 results_file="$TMP_DIR/NSA.2.2.2.4.sgid.txt"
 > $results_file
-for PART in $PARTITIONS; do
-  find $PART -xdev \( -perm -2000 \) -type f -print
-done | grep --invert-match --file="$DATA_DIR/suid_files_allow.txt" >> $results_file
 
-# Do not test /chroot jails
-sed --in-place "/^\\/chroot\\//d" "$results_file"
+find_sgid_files() {
+  local readonly setgidPermissions="-2000"
+  local PART
+  for PART in $PARTITIONS; do
+    find $PART -xdev \( -perm $setgidPermissions \) -type f -print
+  done \
+  | grep --invert-match --file="$DATA_DIR/suid_files_allow.txt" \
+  | cat >> $results_file
+
+  # Omit /chroot jails
+  sed --in-place "/^\\/chroot\\//d" "$results_file"
+}
+find_sgid_files
+
+ui_end_task "Check for unexpected setgid files"
 
 # Interactive part
 if [[ ! -s $results_file ]]; then
-  echo "No results."
+  ui_print_note "No dangerous files found."
+  ui_print_note "Nothing to do."
 else
-  for file in `cat "$results_file"`; do
-    echo "Clear setgid on $file? [y/N]"
-    read proceed
-    if [[ $proceed == "y" ]]; then
-      echo "Performing operation..."
-      chmod g-s "$file"
-      (( ++ACTIONS_COUNTER ))
-      >> "$ACTIONS_TAKEN_FILE" echo $modflag
-      # Append to undo file
-      >> $UNDO_FILE echo "echo 'Undoing suid removal on $file...' "
-      >> $UNDO_FILE echo "chmod g+s '$file'"
-      echo "Wrote to undo file."
-    else
-      echo "Skipped $file."
-    fi
-  done
+  source <(
+    ui_prompt_macro "Unexpected setgid files were found. Would you like to review them interactively? [y/N/f]
+(y = Yes, n = No, f = Force)" proceed n
+  )
+
+  if [ "$proceed" == "y" -o "$proceed" == "f" ]; then
+    # Initiate interactive mode
+    ui_start_task "Interactive setgid fix"
+    for file in `cat "$results_file"`; do
+      # Check for "force" mode
+      if [ "$proceed" != "f" ]; then
+        source <(
+          ui_prompt_macro "* Clear setgid permission on $file? [y/N]" proceed2 n
+        )
+      else
+        # we're in "force" mode, should use y for everything
+        proceed2="y" # force to y for all of them
+      fi
+
+      if [ "$proceed2" == "y" ]; then
+        ui_print_note "* Clearing setgid permission on $file..."
+        chmod g-s "$file"
+        (( ++ACTIONS_COUNTER ))
+        >> "$ACTIONS_TAKEN_FILE" echo $modflag
+        # Append to undo file
+        >> $UNDO_FILE echo "echo 'Undoing sgid removal on $file...' "
+        >> $UNDO_FILE echo "chmod g+s '$file'"
+        ui_print_note "* Wrote undo file."
+      else
+        ui_print_note "* OK, no action taken on $file"
+      fi
+
+    done
+    ui_end_task "Interactive setgid fix"
+  else
+    ui_print_note "OK, skipping fixes."
+  fi
 fi
+
+# this is how far we got
+exit 255
 
 # NSA 2.2.4 Dangerous Execution Patterns
 # NSA 2.2.4.1 umask
