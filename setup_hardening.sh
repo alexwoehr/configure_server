@@ -1,10 +1,8 @@
 #!/bin/sh
 
-echo 
-echo "=============================="
-echo "== WELCOME TO SECURITY HARDENING SCRIPT"
-echo "=============================="
-echo
+source ./ui.inc
+
+ui_section "WELCOME TO SECURITY HARDENING SCRIPT"
 
 ##########################
 # Notes
@@ -21,7 +19,7 @@ echo
 # Setup Variables
 ##########################
 source ./setup_vars.sh \
-|| (echo "Cannot find setup_vars.sh. Exiting..." && exit 3)
+|| (ui_print_note "Cannot find setup_vars.sh. Exiting..." && exit 3)
 
 # Create files
 > "$ACTIONS_TAKEN_FILE"
@@ -30,19 +28,16 @@ source ./setup_vars.sh \
 >> "$UNDO_FILE" echo            
 chmod +x "$UNDO_FILE"
 
-echo "------------------------------"
-echo "-- Runtime Global Variables"
-echo "------------------------------"
-echo "- (see setup_vars.sh for definition)"
-echo PARTITIONS "$PARTITIONS"
-echo UNDO_FILE "$UNDO_FILE"
-echo TMP_DIR "$TMP_DIR"
-echo LIB_DIR "$LIB_DIR"
-echo SCRATCH "$SCRATCH"
-echo ACTIONS_COUNTER "$ACTIONS_COUNTER"
-echo ACTIONS_TAKEN_FILE "$ACTIONS_TAKEN_FILE"
-echo "-- press any key to continue --"
-read proceed
+ui_section "Runtime Global Variables"
+ui_print_note "(See setup_vars.sh for definition.)"
+echo  ".   PARTITIONS          $PARTITIONS"
+echo  ".   UNDO_FILE           $UNDO_FILE"
+echo  ".   TMP_DIR             $TMP_DIR"
+echo  ".   LIB_DIR             $LIB_DIR"
+echo  ".   SCRATCH             $SCRATCH"
+echo  ".   ACTIONS_COUNTER     $ACTIONS_COUNTER"
+echo  ".   ACTIONS_TAKEN_FILE  $ACTIONS_TAKEN_FILE"
+ui_press_any_key
 
 # SECTION
 # - TESTING:
@@ -52,25 +47,31 @@ read proceed
 ##########################
 # SELinux and other prerequisites
 ##########################
-echo "------------------------------"
-echo "-- Setup SELinux"
-echo "------------------------------"
-sestatus
-sestatus | grep "disabled" > "$SCRATCH"
-if [ -s "$SCRATCH" ]; then
-  echo "Please setup SELINUX on your own."
-  echo "Quit script? [y/N]"
+ui_section "Check SELinux Status"
+
+# Show to user
+ui_print_note "SEStatus:"
+sestatus \
+| ui_highlight '(en|dis)abled' --extended-regexp \
+| ui_escape_output "sestatus"
+
+# Check if it's enabled
+if [ -s <( sestatus | grep "disabled" ) ]; then
+  ui_print_note "Please setup SELINUX on your own."
+  ui_print_note "Quit script? [y/N]"
   read proceed
   if [[ $proceed == "y" ]]; then
+    ui_print_note "OK. Quitting."
     exit 99; # aborted
   fi
 else
-  echo "No changes necessary."
+  ui_print_note "No changes necessary."
 fi
 
-echo "------------------------------"
-echo "-- Runtime Global Variables"
-echo "------------------------------"
+# this is how far we got
+exit 255
+
+ui_section "Runtime Environment & Directories"
 modflag="configure_server create standard directories"
 echo "Create our standard directories? [y/N]"
 read proceed
