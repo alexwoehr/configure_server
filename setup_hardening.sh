@@ -146,49 +146,84 @@ chmod 644 /etc/{passwd,group}
 chmod 400 /etc/{shadow,gshadow}
 ui_print_note "OK, done."
 
-# this is how far we got
-exit 255
-
-
 # NSA 2.2.2.2 World Writable Directories
 # SECTION
 # - TESTING:
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Fix World Writable Directories"
-echo "------------------------------"
+ui_section "Fix World Writable Directories"
 modfile=""
 modflag="configure_server directive 2.2.2.2"
+
+ui_start_task "Check for world writable directories"
+
+# Create a results file to browse
 results_file="$TMP_DIR/NSA.2.2.2.2.world_writable_dirs.txt"
 > $results_file
-for PART in $PARTITIONS; do
-  find $PART -xdev -type d \( -perm -0002 -a ! -perm -1000 \) -print
-done >> $results_file
+
+# Find bad files in each partition
+find_worldwritable_dirs() {
+  local readonly worldWritable="-0002"
+  local readonly hasStickyBit="-1000"
+  for PART in $PARTITIONS; do
+    find $PART -xdev -type d \( -perm $worldWritable -a ! -perm $hasStickyBit \) -print
+  done >> $results_file
+}
+find_worldwritable_dirs
+
+ui_end_task "Check for world writable directories"
 
 # Interactive part
-if [[ ! -s $results_file ]]; then
-  echo "No results."
+if [ ! -s $results_file ]; then
+  ui_print_note "No offending directories found."
+  ui_print_note "Nothing to do."
 else
-  for dir in `cat $results_file`; do
-    echo "Set sticky bit for $dir? [y/N]"
-    read proceed
-    if [[ $proceed == "y" ]]; then
-      echo "Performing operation..."
-      chmod +t "$dir"
-      (( ++ACTIONS_COUNTER ))
-      >> "$ACTIONS_TAKEN_FILE" echo $modflag
-      # Append to undo file
-      >> $UNDO_FILE echo "echo 'Undoing sticky bit set on $dir...' "
-      >> $UNDO_FILE echo "chmod -t '$dir'"
-      echo "Wrote to undo file."
-    else
-      echo "OK, no action taken"
-    fi
-  done
+
+  source <(
+    ui_prompt_macro "World-writable directories were found. Would you like to fix them interactively? [y/N/f] \n(y = Yes, n = No, f = Force)" proceed n
+  )
+
+  if [ "$proceed" == "y" ]; then
+    # Initiate interactive mode
+    ui_start_task "Interactive world-writable fix"
+    for dir in `cat $results_file`; do
+
+      # Check for "force" mode
+      if [ "$proceed" != "f" ]; then
+        source <(
+          ui_prompt_macro "* Set sticky bit for $dir? [y/N]" proceed2 n
+        )
+      else
+        # we're in "force" mode, should use y for everything
+        proceed2="y" # force to y for all of them
+      fi
+
+      if [ "$proceed2" == "y" ]; then
+        ui_print_note "Setting sticky bit on $dir..."
+        chmod +t "$dir"
+        ls -alth "$dir" | ui_escape_output ls
+        (( ++ACTIONS_COUNTER ))
+        >> "$ACTIONS_TAKEN_FILE" echo $modflag
+        # Append to undo file
+        >> $UNDO_FILE echo "echo 'Undoing sticky bit set on $dir...' "
+        >> $UNDO_FILE echo "chmod -t '$dir'"
+        ui_print_note "* Wrote undo file."
+      else
+        ui_print_note "* OK, no action taken"
+      fi
+
+    done
+    ui_end_task "Interactive world-writable fix"
+
+  else
+    ui_print_note "OK, skipping fixes."
+  fi
 fi
+
+# this is how far we got
+exit 255
+
 
 # NSA 2.2.2.3 World Writable Files
 # SECTION
