@@ -162,10 +162,11 @@ ui_start_task "Check for world writable directories"
 results_file="$TMP_DIR/NSA.2.2.2.2.world_writable_dirs.txt"
 > $results_file
 
-# Find bad files in each partition
+# Find bad directories in each partition
 find_worldwritable_dirs() {
   local readonly worldWritable="-0002"
   local readonly hasStickyBit="-1000"
+  local PART
   for PART in $PARTITIONS; do
     find $PART -xdev -type d \( -perm $worldWritable -a ! -perm $hasStickyBit \) -print
   done >> $results_file
@@ -222,49 +223,83 @@ else
   fi
 fi
 
-# this is how far we got
-exit 255
-
-
 # NSA 2.2.2.3 World Writable Files
 # SECTION
 # - TESTING:
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Fix World Writable Files"
-echo "------------------------------"
+ui_section "Fix World Writable Files"
 modfile=""
 modflag="configure_server directive 2.2.2.3A"
+
+ui_start_task "Check for world writable files"
+
+# Create a results file with the files
 results_file="$TMP_DIR/NSA.2.2.2.3.world_writable_files.txt"
 > $results_file
-for PART in $PARTITIONS; do
-  find $PART -xdev -type f \( -perm -0002 -a ! -perm -1000 \) -print
-done >> $results_file
+
+# Find bad files in each partition
+find_worldwritable_files() {
+  local PART
+  local readonly worldWritable="-0002"
+  local readonly hasStickyBit="-1000"
+  for PART in $PARTITIONS; do
+    find $PART -xdev -type f \( -perm $worldWritable -a ! -perm $hasSticky \) -print
+  done >> $results_file
+}
+find_worldwritable_files
+
+ui_end_task "Check for world writable files"
 
 # Interactive part
 if [[ ! -s $results_file ]]; then
-  echo "No results."
+  ui_print_note "No offending files found."
+  ui_print_note "Nothing to do."
 else
-  for file in $(< $results_file); do
-    echo "Clear world writable permissions on $file? [y/N]"
-    read proceed
-    if [[ $proceed == "y" ]]; then
-      echo "Performing operation..."
-      chmod o-w "$file"
-      (( ++ACTIONS_COUNTER ))
-      >> "$ACTIONS_TAKEN_FILE" echo $modflag
-      # Append to undo file
-      >> $UNDO_FILE echo "echo 'Undoing world writable reset for $file...' "
-      >> $UNDO_FILE echo "chmod o+w '$file'"
-      echo "Wrote to undo file."
-    else
-      echo "OK, no action taken"
-    fi
-  done
+
+  source <(
+    ui_prompt_macro "World-writable files were found. Would you like to fix them interactively? [y/N/f]
+(y = Yes, n = No, f = Force)" proceed n
+  )
+
+  if [ "$proceed" == "y" -o "$proceed" == "f" ]; then
+    for file in `cat $results_file`; do
+
+      # Check for "force" mode
+      if [ "$proceed" != "f" ]; then
+        source <(
+          ui_prompt_macro "* Clear world writable permissions on $file? [y/N]" proceed2 n
+        )
+      else
+        # we're in "force" mode, should use y for everything
+        proceed2="y" # force to y for all of them
+      fi
+
+      if [ "$proceed2" == "y" ]; then
+        ui_print_note "Setting sticky bit on $dir..."
+        chmod o-w "$file"
+        ls -lh "$dir" | ui_escape_output ls
+        (( ++ACTIONS_COUNTER ))
+        >> "$ACTIONS_TAKEN_FILE" echo $modflag
+        # Append to undo file
+        >> $UNDO_FILE echo "echo 'Undoing world writable reset for $file...' "
+        >> $UNDO_FILE echo "chmod o+w '$file'"
+        ui_print_note "* Wrote undo file."
+      else
+        ui_print_note "* OK, no action taken"
+      fi
+
+    done
+    ui_end_task "Interactive world-writable fix"
+
+  else
+    ui_print_note "OK, skipping fixes."
+  fi
 fi
+
+# this is how far we got
+exit 255
 
 # NSA 2.2.2.3 SUID / SGID permissions
 # SECTION
