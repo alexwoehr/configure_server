@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 source ./ui.inc
 source ./functions.inc
@@ -59,6 +59,9 @@ sestatus \
 if ! fn_selinux_enabled; then
   ui_print_note "setup_hardening assumes that you use SELinux."
   ui_print_note "Please setup SELINUX on your own."
+  if [ -e setup_selinux.sh ]; then
+    ui_print_note "Congratulations! You're in luck! You should be able to run the script setup_selinux.sh. Try that first."
+  fi
   ui_print_note "Quit script? [y/N]"
   read proceed
   if [[ $proceed == "y" ]]; then
@@ -88,48 +91,45 @@ else
   echo "OK, no changes made."
 fi
 
-# this is how far we got
-exit 255
-
 # NSA 2.2.1 Remove Extra FS
 # SECTION
 # - TESTING:
 #   - basic
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Remove Extra FS Types"
-echo "------------------------------"
+ui_section "Remove Extra FS Types"
 modfile="/etc/modprobe.d/configure_server.exclusions.modprobe.conf"
 modflag="configure_server directive 2.2.1"
-cat "$modfile" \
-| grep "$modflag"$ \
-  > "$SCRATCH"
-if [ ! -s $SCRATCH ]; then
-  echo "Proceed? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
+if [ ! -s <( grep "$modflag"$ "$modfile" ) ]; then
+  source <( 
+    ui_prompt_macro "This task has not been done yet. Proceed? [y/N]" proceed n
+  )
+  if [[ "$proceed" == "y" ]]; then
+
     # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveafter_callback
+    )
+
     for fs in usb-storage {cram,freevx,h,squash}fs jffs2 hfsplus udf; do
       >> "$modfile" echo "# $modflag"
       >> "$modfile" echo "install $fs /bin/true"
+      ui_print_note "Removed unnecessary fs: $fs"
     done
-    cp $modfile $modfile.save-after_setup-`date +%F`
+
+    modfile_saveafter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Undoing FS disables...' "
     >> $UNDO_FILE echo "sed --in-place '/^# $modflag/,+1d' '$modfile'"
-    echo "Wrote to undo file."
+    ui_print_note "Wrote undo file."
+
   else
-    echo "OK, did not proceed."
+    ui_print_note "OK, did not proceed."
   fi
 else
-  echo "Already done. No action taken."
+  ui_print_note "Already done. No action taken."
 fi
 
 # NSA 2.2.2 Permissions
@@ -137,14 +137,16 @@ fi
 # SECTION
 # - TESTING:
 #   - basic
-echo
-echo "------------------------------"
-echo "-- Password Permissions"
-echo "------------------------------"
-echo "proceeding because no sane individual would refuse. Only sane individuals are allowed to run this script."
+ui_section "Critical Password Files: Permissions"
+ui_print_note "proceeding because no sane individual would refuse. Only sane individuals are allowed to run this script."
 chown root:root /etc/{passwd,shadow,group,gshadow}
 chmod 644 /etc/{passwd,group}
 chmod 400 /etc/{shadow,gshadow}
+ui_print_note "OK, done."
+
+# this is how far we got
+exit 255
+
 
 # NSA 2.2.2.2 World Writable Directories
 # SECTION
