@@ -720,13 +720,13 @@ else
         cat "$file" \
         | grep --line-number --fixed-strings "$search" \
         | cut -f1 -d: \
-        | sed --in-place 's/$/d/' \
+        | sed 's/$/d/' \
         | tac
       }
 
       if [ "$proceed2" == "y" ]; then
         ui_print_note "* Evicting $item from file..."
-        sed --in-place --file=<( generate_delete_script "$modfile" "$item" ) "$modfile"
+        echo sed --in-place --file=<( generate_delete_script "$modfile" "$item" ) "$modfile"
         (( ++ACTIONS_COUNTER ))
         >> "$ACTIONS_TAKEN_FILE" echo $modflag
 
