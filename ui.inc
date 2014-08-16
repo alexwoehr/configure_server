@@ -4,6 +4,7 @@
 # 
 ui_press_any_key() {
   echo ">>> press any key to continue <<<"
+  local proceed
   read proceed
 }
 
@@ -60,7 +61,7 @@ ui_print_note() {
 
 ui_proceed() {
   local choice;
-  task="$1"
+  local task="$1"
   local default_choice="$2"
   echo ">>> Proceed with task: $task? y/n [$default_choice]"
   read choice
