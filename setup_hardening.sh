@@ -245,7 +245,7 @@ find_worldwritable_files() {
   local readonly worldWritable="-0002"
   local readonly hasStickyBit="-1000"
   for PART in $PARTITIONS; do
-    find $PART -xdev -type f \( -perm $worldWritable -a ! -perm $hasSticky \) -print
+    find $PART -xdev -type f \( -perm $worldWritable -a ! -perm $hasStickyBit \) -print
   done >> $results_file
 }
 find_worldwritable_files
