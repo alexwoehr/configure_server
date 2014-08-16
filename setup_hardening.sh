@@ -581,9 +581,6 @@ fi
 
 ui_end_task "Disable Core Dumps via sysctl.conf"
 
-# this is how far we got
-exit 255
-
 # NSA 2.2.4.3 execshield
 # SECTION
 # - TESTING:
@@ -627,6 +624,9 @@ if [ 0 == $( grep "$modflag"$ "$modfile" | wc -l) ]; then
 else
   ui_print_note "Already done. No action taken."
 fi
+
+# this is how far we got
+exit 255
 
 # NSA 2.2.4.5 prelink
 # does not exist on this server; code below is untested
