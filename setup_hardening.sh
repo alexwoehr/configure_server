@@ -702,11 +702,6 @@ else
     handle_item() {
       local item="$*" # one at a time
 
-    }
-
-    # Process each terminal
-    cat "$SCRATCH" \
-    | while (read item); do
       # Check for "force" mode
       if [ "$proceed" != "f" ]; then
         # Ask
@@ -742,7 +737,13 @@ else
       else
         ui_print_note "* OK, no action taken on $item"
       fi
-    done
+    }
+
+    # Execute our subroutine on each item
+    source <(
+      cat "$SCRATCH" \
+      | sed 's/^/handle_item /'
+    )
 
     # Backup copy of new file we have created
     modfile_saveAfter_callback
