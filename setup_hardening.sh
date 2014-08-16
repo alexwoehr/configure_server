@@ -625,9 +625,6 @@ else
   ui_print_note "Already done. No action taken."
 fi
 
-# this is how far we got
-exit 255
-
 # NSA 2.2.4.5 prelink
 # does not exist on this server; code below is untested
 ####    echo "------------------------------"
@@ -671,41 +668,98 @@ exit 255
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Restrict Root Logins to System Console "
-echo "------------------------------"
-checkfile="/etc/securetty"
+
+ui_section "Restrict Root Logins to System Console "
+
+modfile="/etc/securetty"
 modflag="configure_server directive 2.3.1.1"
-checks=`cat $DATA_DIR/securetty_allowed.txt | tr "\n" "|" | sed 's/|/ -e /g' | sed 's/-e $//'`
-cat "$checkfile" \
-| eval "grep --invert-match -E -e $checks " \
+
+cat "$modfile" \
+| grep --invert-match --extended-regexp --file="$DATA_DIR/securetty_allowed.txt" \
   > "$SCRATCH"
-if [ -s $SCRATCH ]; then 
-  echo "The following extraneous consoles have been discovered:"
-  sed 's/.*/- \0/' $SCRATCH
-  echo
-  echo "Remove these items? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    # Create new file with only accepted consoles
-    cat $checkfile \
-    | eval "grep -E -e $checks " \
-      > "$SCRATCH"new
-    mv "$SCRATCH"new $checkfile
-    (( ++ACTIONS_COUNTER ))
-    >> "$ACTIONS_TAKEN_FILE" echo $modflag
-    # Append to undo file
-    >> $UNDO_FILE echo   "echo 'Re-adding removed consoles...' "
-    for console in `cat $SCRATCH`; do
-      >> $UNDO_FILE echo ">> '$checkfile' echo '$console'"
-    done
-  else
-    echo "OK, no changes made."
-  fi
+
+if [ 0 '==' $(wc -l "$SCRATCH") ]; then 
+  ui_print_note "No dangerous files found."
+  ui_print_note "Nothing to do."
 else
-  echo "No changes necessary."
+  ui_print_note "The following extraneous consoles have been discovered:"
+  cat "$SCRATCH" \
+  | xargs -d"\n" -n 1 ui_print_note
+
+  source <(
+    ui_prompt_macro "Remove these items interactively? [y/N/f]
+(y = Yes, n = No, f = Force all)" proceed n
+  )
+
+  if [ "$proceed" == "y" -o "$proceed" == "f" ]; then
+    # Initiate interactive mode
+    ui_start_task "Interactive console removal"
+
+    # Save old file
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    handle_item() {
+      local item="$*" # one at a time
+
+      # Check for "force" mode
+      if [ "$proceed" != "f" ]; then
+        # Ask
+        source <(
+          ui_prompt_macro "* Evict $item? [y/N]" proceed2 n
+        )
+      else
+        # we're in "force" mode, should use y for everything
+        proceed2="y" # force to y for all of them
+      fi
+
+      # Generate sed commands by generating line numbers and tacking "d" command on the end.
+      generate_delete_script() {
+        local file="$1"
+        local search="$2"
+        cat "$file" \
+        # Get list of line numbers
+        | grep --line-number --fixed-strings "$search" \
+        | cut -f1 -d: \
+        # add "d" command after the line number
+        | sed --in-place 's/$/d/' \
+        # reverse to ensure we delete in correct order
+        | tac
+      }
+
+      if [ "$proceed2" == "y" ]; then
+        ui_print_note "* Evicting $item from file..."
+        sed --in-place --file=<( generate_delete_script "$modfile" "$item" ) "$modfile"
+        (( ++ACTIONS_COUNTER ))
+        >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
+        # Append to undo file
+        >> $UNDO_FILE echo   "echo 'Re-adding removed console $item...' "
+        >> $UNDO_FILE echo ">> '$checkfile' echo '$item'"
+        ui_print_note "* Wrote undo file."
+      else
+        ui_print_note "* OK, no action taken on $item"
+      fi
+    }
+
+    # Run our subroutine to handle each item
+    cat "$SCRATCH" \
+    | xargs -n 1 -d"\n" handle_item
+
+    # Backup copy of new file we have created
+    modfile_saveAfter_callback
+
+  else
+    ui_print_note "OK, did not proceed."
+  fi
+
+else
+  ui_print_note "No changes necessary."
 fi
+
+# this is how far we got
+exit 255
 
 
 # NSA 2.3.1.2 Limit su Access to the Root Account
