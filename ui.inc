@@ -11,7 +11,7 @@ ui_press_any_key() {
 # Description: announce a new section to the user. Request clearance to proceed.
 # 
 ui_section() {
-  title="$1" && shift
+  local title="$1"
   echo
   echo "======================="
   echo "=="
@@ -24,8 +24,7 @@ ui_section() {
 }
 
 ui_start_task() {
-  readonly local title="$1"
-  shift
+  local title="$1"
   echo "----------------------------------------------"
   echo "... Begin: $title ..."
 
@@ -33,8 +32,7 @@ ui_start_task() {
 }
 
 ui_end_task() {
-  readonly local title="$1"
-  shift
+  local title="$1"
   echo "... Done: $title."
 
   ui_press_any_key
@@ -45,8 +43,7 @@ ui_end_task() {
 
 ui_escape_output() {
   # Pipe stdin into sed and prepend escape
-  readonly local cmd="$1"
-  shift
+  local cmd="$1"
   cat | sed "s/^/[$cmd says] /"
 }
 
@@ -54,8 +51,7 @@ ui_escape_output() {
 # Description: Display a conclusion
 
 ui_print_note() {
-  readonly local note="$1"
-  shift
+  local note="$1"
   echo "--- $note"
 }
 
@@ -65,9 +61,7 @@ ui_print_note() {
 ui_proceed() {
   local choice;
   task="$1"
-  shift
-  readonly local default_choice="$1"
-  shift
+  local default_choice="$2"
   echo ">>> Proceed with task: $task? y/n [$default_choice]"
   read choice
   if [[ -z $proceed ]]; then
@@ -77,18 +71,17 @@ ui_proceed() {
   echo "<<< OK, using $choice"
 }
 
-# hold onto your hats
-# this is a macro
+# ui_prompt_macro:
+#   Standard ui function to prompt for an input.
+# 
+# hold onto your hats, this is a macro
 # Run it like this:
 #   source <( ui_prompt_macro "prompt" "inputVar" "default"  )
 ui_prompt_macro() {
   # Variables
-  readonly local prompt="$1"
-  shift
-  readonly local varname="$1"
-  shift
-  readonly local default_value="$1"
-  shift
+  local prompt="$1"
+  local varname="$2"
+  local default_value="$3"
   # Note: is expansion safe?
   # Create macro and replace arguments
   cat - <<-END_MACRO
@@ -103,7 +96,7 @@ END_MACRO
 
 # Uses grep to highlight
 ui_highlight() {
-  local readonly expression="$1"
+  local expression="$1"
   shift
   cat - \
   | grep --color=always --regexp="$expression" "$@"

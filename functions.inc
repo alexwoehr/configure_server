@@ -13,18 +13,18 @@ fn_selinux_enabled() {
 
 # Note: if you submit a callback, you must be prepared to set it.
 fn_backup_config_file_macro() {
-  local readonly modfile="$1"
-  local readonly callback_name="$2"
+  local modfile="$1"
+  local callback_name="$2"
 
   # Save old file
-  local readonly modfile_old_bak="$modfile".save-before-`date +%F`
+  local modfile_old_bak="$modfile".save-before-`date +%F`
   if [ ! -e "$modfilebak" ]; then
     cp $modfile $modfile_old_bak
   fi
 
   # Return 
   if [[ -n "$callback_name" ]]; then
-    local readonly modfile_new_bak="$modfile".save-after-`date +%F`
+    local modfile_new_bak="$modfile".save-after-`date +%F`
     # Send it on standard out
     cat - <<-END_MACRO
       $callback_name() {
