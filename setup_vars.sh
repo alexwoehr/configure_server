@@ -38,6 +38,9 @@ mkdir --parents "$TMP_DIR"
 # LIB_DIR: Probably current directory. Stores our data that doesn't change from run to run.
 export LIB_DIR="/var/lib/setup_script"
 
+# DATA_DIR: Contains data that drives different tasks
+export DATA_DIR="$LIB_DIR/data"
+
 # SCRIPTS_DIR: all scripts are in here
 export SCRIPTS_DIR="/var/lib/configure_server/scripts"
 mkdir --parents $SCRIPTS_DIR
