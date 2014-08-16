@@ -77,20 +77,28 @@ ui_proceed() {
   echo "<<< OK, using $choice"
 }
 
-ui_prompt() {
-  local choice;
+# hold onto your hats
+# this is a macro
+# Run it like this:
+#   source <( ui_prompt_macro "prompt" "inputVar" "default"  )
+ui_prompt_macro() {
+  # Variables
   readonly local prompt="$1"
   shift
-  readonly local options="$1"
+  readonly local varname="$1"
   shift
-  readonly local default_choice="$1" && shift
-  echo ">>>" "$prompt" "[$options]"
-  read choice
-  if [[ -z $proceed ]]; then
-    # Use default if no choice supplied
-    $choice=$default_choice
-  fi
-  echo "<<< OK, using $choice"
+  readonly local default_value="$1"
+  shift
+  # Note: is expansion safe?
+  # Create macro and replace arguments
+  cat - <<-END_MACRO
+        echo ">>>" "$prompt"
+        read "$varname"
+        # Substitute default value if necessary
+        $varname=\${$varname:-$default_value}
+        echo "<<< OK, using \$$varname"
+END_MACRO
+
 }
 
 # Uses grep to highlight
