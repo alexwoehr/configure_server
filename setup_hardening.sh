@@ -55,8 +55,8 @@ sestatus \
 | ui_highlight '(en|dis)abled' --extended-regexp \
 | ui_escape_output "sestatus"
 
-# Check if it's enabled
-if [ -s <( sestatus | grep "disabled" ) ]; then
+# Check if it's disabled
+if getenforce | awk '/Disabled/ { exit 0 }'; then
   ui_print_note "Please setup SELINUX on your own."
   ui_print_note "Quit script? [y/N]"
   read proceed
@@ -65,6 +65,7 @@ if [ -s <( sestatus | grep "disabled" ) ]; then
     exit 99; # aborted
   fi
 else
+  ui_print_note "SELinux is enabled."
   ui_print_note "No changes necessary."
 fi
 
