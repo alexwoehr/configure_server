@@ -683,8 +683,7 @@ if [ 0 '==' $(wc -l < "$SCRATCH") ]; then
   ui_print_note "Nothing to do."
 else
   ui_print_note "The following extraneous consoles have been discovered:"
-  cat "$SCRATCH" \
-  | xargs -d"\n" -n 1 ui_print_note
+  cat "$SCRATCH" | sed 's/^/- /'
 
   source <(
     ui_prompt_macro "Remove these items interactively? [y/N/f]
@@ -703,6 +702,11 @@ else
     handle_item() {
       local item="$*" # one at a time
 
+    }
+
+    # Process each terminal
+    cat "$SCRATCH" \
+    | while (read item); do
       # Check for "force" mode
       if [ "$proceed" != "f" ]; then
         # Ask
@@ -738,11 +742,7 @@ else
       else
         ui_print_note "* OK, no action taken on $item"
       fi
-    }
-
-    # Run our subroutine to handle each item
-    cat "$SCRATCH" \
-    | xargs -n 1 -d"\n" handle_item
+    done
 
     # Backup copy of new file we have created
     modfile_saveAfter_callback
