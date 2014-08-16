@@ -99,6 +99,7 @@ fi
 ui_section "Remove Extra FS Types"
 modfile="/etc/modprobe.d/configure_server.exclusions.modprobe.conf"
 modflag="configure_server directive 2.2.1"
+
 # Check whether this flag has been applied yet
 if [ 0 == $( grep "$modflag"$ "$modfile" | wc -l) ]; then
   source <( 
@@ -504,6 +505,8 @@ fi
 #   - undo
 ui_section "Disable Core Dumps"
 
+ui_start_task "Disable Core Dumps via limits.conf"
+
 modfile="/etc/security/limits.conf"
 modflag="configure_server directive 2.2.4.2A"
 
@@ -538,40 +541,48 @@ else
   ui_print_note "Already done. No action taken."
 fi
 
-# this is how far we got
-exit 255
+ui_end_task "Disable Core Dumps via limits.conf"
+
+ui_start_task "Disable Core Dumps via sysctl.conf"
 
 modfile="/etc/sysctl.conf"
 modflag="configure_server directive 2.2.4.2B"
-cat "$modfile" \
-| grep "$modflag"$ \
-| tee $SCRATCH \
-&& if [ ! -s $SCRATCH ]; then
-  echo "Disable core dumps in $modfile? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
+
+# Check whether this flag has been applied yet
+if [ 0 == $( grep "$modflag"$ "$modfile" | wc -l) ]; then
+  source <( 
+    ui_prompt_macro "This task has not been done yet. Proceed to disable core dumps in $modfile? [y/N]" proceed n
+  )
+
+  if [ "$proceed" == "y" ]; then
     # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
-    echo "Performing operation on $modfile..."
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    ui_print_note "Disabling core dumps via $modfile..."
     >> $modfile echo "# $modflag"
     >> $modfile echo "fs.suid_dumpable = 0"
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
+
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Undoing core dump disablement on $modfile...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-    echo "Wrote to undo file."
+    ui_print_note "Wrote undo file."
   else
-    echo "OK, no action taken"
+    ui_print_note "OK, did not proceed."
   fi
 else
-  echo "Already done. No action taken."
+  ui_print_note "Already done. No action taken."
 fi
+
+ui_end_task "Disable Core Dumps via sysctl.conf"
+
+# this is how far we got
+exit 255
 
 # NSA 2.2.4.3 execshield
 # SECTION
