@@ -3,10 +3,10 @@
 fn_selinux_enabled() {
   if [ -s <( getenforce | grep "Disabled" ) ]; then
     # Disabled
-    exit 1
+    return 1
   else
     # Enforcing or Permissive
-    exit 0
+    return 0
   fi
 }
 
