@@ -590,41 +590,42 @@ exit 255
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- ExecShield"
-echo "------------------------------"
+ui_section "ExecShield"
+
 modfile="/etc/sysctl.conf"
 modflag="configure_server directive 2.2.4.3"
-cat "$modfile" \
-| grep "$modflag"$ \
-| tee $SCRATCH \
-&& if [ ! -s $SCRATCH ]; then
-  echo "Enable exec-shield? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
+
+# Check whether this flag has been applied yet
+if [ 0 == $( grep "$modflag"$ "$modfile" | wc -l) ]; then
+  source <( 
+    ui_prompt_macro "Enable execshield in $modfile? [y/N]" proceed n
+  )
+
+  if [ "$proceed" == "y" ]; then
     # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
-    echo "Enabling ExecShield.."
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    ui_print_note "Enabling ExecShield.."
     >> $modfile echo "# $modflag"
     >> $modfile echo "kernel.exec-shield = 1" 
     >> $modfile echo "# $modflag"
     >> $modfile echo "kernel.randomize_va_space = 1"
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
+
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Undoing exec-shield enable...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
+    ui_print_note "Wrote undo file."
   else
-    echo "Not changed."
+    ui_print_note "OK, did not proceed."
   fi
 else
-  echo "Already done. No action taken."
+  ui_print_note "Already done. No action taken."
 fi
 
 # NSA 2.2.4.5 prelink
