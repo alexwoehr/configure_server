@@ -726,7 +726,7 @@ else
 
       if [ "$proceed2" == "y" ]; then
         ui_print_note "* Evicting $item from file..."
-        echo sed --in-place --file=<( generate_delete_script "$modfile" "$item" ) "$modfile"
+        sed --in-place --file=<( generate_delete_script "$modfile" "$item" ) "$modfile"
         (( ++ACTIONS_COUNTER ))
         >> "$ACTIONS_TAKEN_FILE" echo $modflag
 
