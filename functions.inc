@@ -1,7 +1,7 @@
 
 # Check if selinux is disabled
 fn_selinux_enabled() {
-  if -s <( getenforce | grep "Disabled" ); then
+  if [ -s <( getenforce | grep "Disabled" ) ]; then
     # Disabled
     exit 1
   else
