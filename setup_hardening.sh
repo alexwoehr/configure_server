@@ -822,7 +822,7 @@ else
     >> $modfile echo "# $modflag"
     >> $modfile echo "security=1"
 
-    # Find line number for wheel
+    # Find line number containing root privileges
     pam_find_wheel() {
       local cmd="$1"
       # Print out the line number for the line we are looking for
@@ -870,6 +870,9 @@ modfile="/etc/sudoers"
 modflag="configure_server directive 2.3.1.3"
 
 if [ 0 '<' $( grep "$modflag"$ "$modfile" | wc -l) ]; then
+  ui_print_note "No changes necessary."
+else
+
   source <( 
     ui_prompt_macro "This task has not been done yet. Proceed to restrict sudo permissions to wheel via $modfile? [y/N]" proceed n
   )
@@ -877,9 +880,30 @@ if [ 0 '<' $( grep "$modflag"$ "$modfile" | wc -l) ]; then
   if [ "$proceed" != "y" ]; then
     ui_print_note "OK, did not proceed."
   else
+
+    #backup
     source <(
       fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
     )
+
+    # Find line number containing root privileges
+    sudoers_find_root() {
+      local cmd="$1"
+      # Print out the line number for the line we are looking for
+      cat "/etc/sudoers" \
+      | awk '/^root.*ALL.*ALL.*ALL/ { print FNR; exit }'
+    }
+
+    # Add line for wheel permission
+    sudoers_add_wheel_req_script() {
+      local line="$1"
+      # command to append a line
+      echo "${line} a\\"
+      # new line: modflag
+      echo "# $modflag\\"
+      # new line: new configuration line
+      echo "%wheel	ALL=(ALL)	ALL"
+    }
 
     >> $modfile echo "# $modflag"
     >> $modfile echo '%wheel ALL=(ALL) NOPASSWD: ALL'
@@ -894,8 +918,6 @@ if [ 0 '<' $( grep "$modflag"$ "$modfile" | wc -l) ]; then
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
     ui_print_note "Wrote undo file."
   fi
-else
-  ui_print_note "No changes necessary."
 fi
 
 exit 255 # how far we got
