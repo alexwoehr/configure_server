@@ -858,48 +858,47 @@ fi
 
 ui_end_task "$modflag: Add sudo wheel permissions to pam"
 
-exit 255 # how far we got
-
 # NSA 2.3.1.3 Conﬁgure sudo to Improve Auditing of Root Access
 # SECTION
 # - TESTING:
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Limit sudo privileges for only $wheelgroup"
-echo "------------------------------"
+ui_section "Limit sudo privileges for only $wheelgroup via sudoers"
+
 modfile="/etc/sudoers"
 modflag="configure_server directive 2.3.1.3"
-cat $modfile \
-| grep "$modflag"$ \
-  > $SCRATCH
-if [ ! -s $SCRATCH ]; then 
-  echo "Add sudoers enablement for su? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
+
+if [ 0 '<' $( grep "$modflag"$ "$modfile" | wc -l) ]; then
+  source <( 
+    ui_prompt_macro "This task has not been done yet. Proceed to restrict sudo permissions to wheel via $modfile? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, did not proceed."
+  else
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
     >> $modfile echo "# $modflag"
     >> $modfile echo '%wheel ALL=(ALL) NOPASSWD: ALL'
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
+
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing wheel group sudoers enablement...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-    echo "Wrote to undo file."
-  else
-    echo "OK, no changes made."
+    ui_print_note "Wrote undo file."
   fi
 else
-  echo "No changes necessary."
+  ui_print_note "No changes necessary."
 fi
+
+exit 255 # how far we got
 
 # NSA 2.3.1.4 Block Shell and Login Access for Non-Root System Accounts
 # SECTION
