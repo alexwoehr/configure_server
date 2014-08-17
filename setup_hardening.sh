@@ -760,23 +760,23 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Limit su Access to the Root Account"
-echo "------------------------------"
-checkfile="/etc/group"
-modfile=""
+ui_section "Limit su Access to the Root Account"
+modfile="/etc/group"
 modflag="configure_server directive 2.3.1.2A"
-wheelgroup=wheel
-echo "- Step 1. Create wheel group."
-grep "^$wheelgroup:" "$checkfile" \
+readonly wheelgroup=wheel
+ui_start_task "Create wheel group"
+
+grep "^$wheelgroup:" "$modfile" \
   > $SCRATCH
-if [ ! -s $SCRATCH ]; then 
-  echo "There is no $wheelgroup group. Create it? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
+if [ 0 == $(grep "^$wheelgroup:" "$modfile" | wc -l ) ]; then 
+  source <( 
+    ui_prompt_macro "There is no $wheelgroup group. Create it? [y/N]" proceed n
+  )
+
+  if [ "$proceed" == "y" ]; then
+    ui_print_note "Adding new group..."
     groupadd "$wheelgroup"
-    echo "WARNING: Please add $wheelgroup restriction to pam!"
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
     # Append to undo file
@@ -789,83 +789,76 @@ else
   echo "No changes necessary."
 fi
 
-# this is how far we got
-exit 255
+ui_end_task "Create wheel group"
 
+ui_start_task "Restrict sudo to wheel via pam"
 
-# BASED ON SECTION TEMPLATE 0.2
-# - 
-#   type: SECTION
-#   testing:
-#     - minimum
-#     - undo
-#     - force fix
-# [A] Basic variables for this section
+# [A] Variables
 modflag="configure_server directive 2.3.1.2B"
 modfile="/etc/pam.d/su"
+
 # [B] Header
-echo "---------------------"
-echo "- $modflag: Add wheel permissions to pam"
-echo "---------------------"
+ui_start_task "$modflag: Add sudo wheel permissions to pam"
+
 # [C] check if we need to make our change
-echo "... Checking whether to make changes or not..."
-cat "$modfile" \
-| grep "^# $modflag$" \
-  > $SCRATCH
-if [[ ! -s $SCRATCH ]]; then
-  echo "... No changes necessary."
+if [ 0 '<' $( grep "$modflag"$ "$modfile" | wc -l) ]; then
+  ui_print_note "Already done. No action taken."
 else
-  echo "... Changes not made yet."
   # [D] ask whether to make changes
-  echo "... Restriction sudoing to wheel group in pam? [y/N]"
-  read proceed
-  if [[ $proceed != "y" ]]; then
-    echo "... OK, no changes made."
+  source <( 
+    ui_prompt_macro "This task has not been done yet. Proceed to restrict sudo permissions to wheel via $modfile? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, did not proceed."
   else
+
     # [E] backup modfile before making changes
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [[ ! -e "$modfilebak" ]]; then
-      cp $modfile $modfilebak
-    fi
-    echo "... Changing $modfile ..."
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    ui_print_note "... Changing $modfile ..."
     >> $modfile echo "# $modflag"
     >> $modfile echo "security=1"
 
-    while true; do
-      # Check if they have signed off on changes yet.
-      grep "# CHANGES OK" $modfile
-        > $SCRATCH
-      if [[ -s $SCRATCH ]]; then
-        break
-      fi
-      echo "... signoff not found yet."
-      echo "=== WARNING ==="
-      echo "=== please ensure that pam.d/su is not botched!"
-      echo "=== add following separate line to end of file to sign off on changes when you are done:"
-      echo "# CHANGES OK"
-      echo "=== quit with ^Z, then fg to return and hit enter."
-      echo "-- press any key when ready --"
-      read proceed
-    done
-    # Remove signoff in case file is modified again.
-    sed --in-place '/^# CHANGES OK$/d' $modfile
+    # Find line number for wheel
+    pam_find_wheel() {
+      local cmd="$1"
+      # Print out the line number for the line we are looking for
+      cat "/etc/pam.d/$cmd" \
+      | awk '$1 == "#auth" && $2 == "required" && $3 == "pam_wheel.so" { print FNR } '
+    }
 
-    echo "... Done."
+    # Add line for wheel requirement
+    pam_add_wheel_req_script() {
+      local line="$1"
+      # command to append a line
+      echo "${line} a\\"
+      # new line: modflag
+      echo "# $modflag\\"
+      # new line: new configuration line
+      echo "auth	required	pam_wheel.so use_uid"
+    }
+
+    sed --in-place --file=<( pam_add_wheel_req_script $(pam_find_wheel su) ) /etc/pam.d/su
+
+    modfile_saveAfter_callback
+
     # [H] Stat the action
     (( ++ACTIONS_COUNTER ))
-    >> "$ACTIONS_TAKEN_FILE" echo $modflag "interactively for $file"
+    >> "$ACTIONS_TAKEN_FILE" echo "$modflag"
     # [I] Append to undo file
     >> $UNDO_FILE echo "echo '### $modflag ###' "
-    >> $UNDO_FILE echo "echo 'Removing changes to $modfile...' "
+    >> $UNDO_FILE echo "echo 'Removing wheel restriction from $modfile...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-    echo "... Wrote undo file."
-    # [J] now backup current versions
-    cp $modfile $modfile.save-after_setup-`date +%F`
+    ui_print_note "Wrote undo file."
   fi
 fi
-# [K] ensure they acknowledge the above before proceeding
-echo "-- press enter when ready --"
-read proceed
+
+ui_end_task "$modflag: Add sudo wheel permissions to pam"
+
+exit 255 # how far we got
 
 # NSA 2.3.1.3 Conﬁgure sudo to Improve Auditing of Root Access
 # SECTION
