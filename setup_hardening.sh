@@ -903,7 +903,7 @@ else
       echo "%wheel	ALL=(ALL)	ALL"
     }
 
-    sed --in-place --file=<( sudoers_add_wheel_req_script $(sudoers_find_root) )
+    sed --in-place --file=<( sudoers_add_wheel_req_script $(sudoers_find_root) ) /etc/sudoers
 
     modfile_saveAfter_callback
 
