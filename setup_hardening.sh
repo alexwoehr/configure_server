@@ -888,10 +888,8 @@ else
 
     # Find line number containing root privileges
     sudoers_find_root() {
-      local cmd="$1"
       # Print out the line number for the line we are looking for
-      cat "/etc/sudoers" \
-      | awk '/^root.*ALL.*ALL.*ALL/ { print FNR; exit }'
+      cat "/etc/sudoers" | awk '/^root.*ALL.*ALL.*ALL/ { print FNR; exit }'
     }
 
     # Add line for wheel permission
@@ -905,8 +903,7 @@ else
       echo "%wheel	ALL=(ALL)	ALL"
     }
 
-    >> $modfile echo "# $modflag"
-    >> $modfile echo '%wheel ALL=(ALL) NOPASSWD: ALL'
+    sed --in-place --file=<( sudoers_add_wheel_req_script $(sudoers_find_root) )
 
     modfile_saveAfter_callback
 
