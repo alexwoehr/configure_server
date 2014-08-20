@@ -1023,79 +1023,90 @@ else
 
 fi
 
-exit 255 # how far we got
-
 # NSA 2.3.1.5 Verify Proper Storage and Existence of Password Hashes
 # SECTION
 # - TESTING:
 #   - basic
-echo
-echo "------------------------------"
-echo "-- Verify Proper Storage and Existence of Password Hashes"
-echo "------------------------------"
-echo "- Step 1: Ensure no empty passwords"
-echo "-         [seems impossible, but might as well check]"
+ui_section "Verify Proper Storage and Existence of Password Hashes"
+
+ui_start_task "Step 1: Ensure no empty passwords"
+
 checkfile="/etc/shadow"
 modflag="configure_server directive 2.3.1.5A"
 # List accounts that should definitely be locked
-cat $checkfile \
+cat "$checkfile" \
 | awk --field-separator=":" '($2 == "") {print $1}' \
-  > $SCRATCH
-if [ -s $SCRATCH ]; then 
-  echo "Passwords are empty for following accounts:"
-  cat $SCRATCH | tr "\n" "\t"
-  echo
+  > "$SCRATCH"
+if [ 0 == `cat "$SCRATCH" | wc -l` ]; then 
+  ui_print_note "No empty passwords found."
+else
+  ui_print_note "Passwords are empty for following accounts:"
+  sed 's/^/- /' $SCRATCH
   echo "Reenter passwords for these users? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
+  source <(
+    ui_prompt_macro "Reenter passwords for these users? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, did not proceed."
+  else
+    # Set passwords for all of them
     cat $SCRATCH | xargs --max-args=1 --delimiter="\n" passwd
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Following users had empty passwords, not reverting...' "
-    cat $SCRATCH | tr "\n" "\t"
-    echo "Wrote undo file (with no-op)."
-  else
-    echo "OK, no changes made."
+    >> $UNDO_FILE sed 's/^/- /' "$SCRATCH" 
+    ui_print_note "Wrote undo file (with no-op)."
   fi
-else
-  echo "No changes necessary."
 fi
+
+ui_end_task "Step 1: Ensure no empty passwords"
 
 # SECTION
 # - TESTING:
 #   - basic
-echo "- Step 2: Ensure no passwords in passwd file"
-echo "-         [untested b/c highly unlikely]"
+
+ui_start_task "Step 2: Ensure no passwords in passwd file"
+ui_print_note "[untested b/c highly unlikely]"
+
 checkfile="/etc/passwd"
 modflag="configure_server directive 2.3.1.5B"
 # List accounts that should definitely be locked
 cat $checkfile \
 | awk --field-separator=":" '($2 != "x") {print $1}' \
   > $SCRATCH
-if [ -s $SCRATCH ]; then 
-  echo "Invalid passwords for following files were discovered:"
-  cat $SCRATCH | tr "\n" "\t"
-  echo \n
-  echo "Reenter passwords for these users? [y/N]"
+if [ 0 == `cat "$SCRATCH" | wc -l` ]; then 
+  ui_print_note "No offending users found."
+else
+  ui_print_note "WARNING"
+  ui_print_note "Invalid passwords for following files were discovered:"
+  sed 's/^/- /' "$SCRATCH"
+  ui_print_note
   read proceed
-  if [[ $proceed == "y" ]]; then
-    cat $SCRATCH | xargs --max-args=1 --delimiter="\n" passwd
+  source <( 
+    ui_prompt_macro  "Reenter passwords for these users? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, did not proceed."
+  else
+    # Reset all passwords
+    ui_print_note "OK, resetting these passwords."
+    cat "$SCRATCH" | xargs --max-args=1 --delimiter="\n" passwd
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Following users had passwords in wrong place. Passwords were changed...' "
-    tr "\n" "\t" $SCRATCH
-    echo "Wrote undo file (with no-op)."
-    echo "NOTE: you should test whether this worked because it has not been tested."
-    echo "Please hit ^Z and fix, then 'fg' when you are done to return to the process and press any key..."
-    read proceed
-  else
-    echo "OK, no changes made."
+    >> $UNDO_FILE sed 's/^/echo - /' "$SCRATCH"
+    ui_print_note "Wrote undo file (with no-op)."
   fi
-else
-  echo "No changes necessary."
 fi
+
+exit 255 # todo: remove
 
 # NSA 2.3.1.6 Verify that No Non-Root Accounts Have UID 0
 # SECTION
