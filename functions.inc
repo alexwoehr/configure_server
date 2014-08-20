@@ -33,6 +33,22 @@ fn_get_user_login() {
   | awk -F: "\$1 == \"$acct\" {print \$NF}"
 }
 
+# Check if a group exists
+# Empty if no group, otherwise returns name of group
+fn_does_group_exist_yn() {
+  local groupName="$1"
+  grep "^$groupName:" /etc/group \
+  | cut --fields=1 --delimiter':'
+}
+
+# Lists users (additional users) in a group
+fn_list_addl_users_in_group() {
+  local groupName="$1"
+  getent group "$groupName" \
+  | awk --field-separator=':' '{print $NF}' \
+  | tr ',' "\n"
+}
+
 # Functions for listing different kinds of users
 # 
 # Get system users (not including root)
@@ -66,6 +82,34 @@ fn_parse_locked_users() {
   cat /etc/shadow \
   | awk --field-separator=":" 'substr($2, 1, 1) == "!" { print $1 }'
 }
+
+# Functions for working with pam
+
+# Get stacking behavior (required, requisite, sufficient, etc)
+pam_get_stacking() {
+  local file="$1"
+  local line="$2"
+  cat "/etc/pam.d/$file" \
+  | awk "FNR == \"$line\" { print \$2 }"
+}
+
+# Find line number containing wheel privileges
+pam_find_wheel() {
+  local file="${1:-su}"
+  # Print out the line number for the line we are looking for
+  cat "/etc/pam.d/$file" \
+  | awk '$1 == "#auth" && $3 == "pam_wheel.so" { print FNR } '
+}
+
+# Find line number involving password quality
+pam_find_cracklib() {
+  local file="${1:-system-auth}"
+  # Cat the line number for the line we are looking for
+  cat "/etc/pam.d/$file" \
+  | awk '$1 == "password" && $3 == "pam_cracklib.so" { print FNR } '
+}
+
+
 
 # Macros and helper functions for setup script
 # 
