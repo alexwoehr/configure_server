@@ -953,7 +953,7 @@ if [ 0 == `cat "$SCRATCH"_to_{b,}lock | wc -l` ]; then
   ui_print_note "No offending users found."
 else
   ui_print_note "Following accounts should be locked and/or blocked:"
-  sed 's/^/- /' "$SCRATCH"
+  sed 's/^/- /' <( sort "$SCRATCH"_to_{b,}lock | uniq)
 
   source <( 
     ui_prompt_macro "Interactively lock these non-human users and block access? [y/N/f]" proceed n
