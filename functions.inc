@@ -39,32 +39,32 @@ fn_get_user_login() {
 fn_parse_system_users() {
   cat /etc/passwd \
   | grep --invert-match ^root: \
-  | awk --field-separator=":" '$3 < 500' 
+  | awk --field-separator=":" '$3 < 500 {print $1 }'
 }
 
 # List accounts that should definitely be locked
 # Get FTP users
 fn_parse_ftp_users() {
   cat /etc/passwd \
-  | awk --field-separator=":" 'substr($1, 1, 3) == "ftp"' 
+  | awk --field-separator=":" 'substr($1, 1, 3) == "ftp" {print $1 }' 
 }
 
 # List users set to "nologin"
 fn_parse_nologin_users() {
   cat /etc/passwd \
-  | awk --field-separator=":" '$NF == "/sbin/nologin"'
+  | awk --field-separator=":" '$NF == "/sbin/nologin" { print $1 }'
 }
 
 # List system processes that use their own name as login shell
 fn_parse_narcissist_users() {
   cat /etc/passwd \
-  | awk --field-separator=":" '$1 == substr($NF, length($NF) - length($1) + 1)'
+  | awk --field-separator=":" '$1 == substr($NF, length($NF) - length($1) + 1) { print $1 }'
 }
 
 # List users with locked password (preceded by "!")
 fn_parse_locked_users() {
   cat /etc/shadow \
-  | awk --field-separator=":" 'substr($2, 1, 1) == "!"'
+  | awk --field-separator=":" 'substr($2, 1, 1) == "!" { print $1 }'
 }
 
 # Macros and helper functions for setup script
