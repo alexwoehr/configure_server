@@ -933,7 +933,8 @@ modflag="configure_server directive 2.3.1.4"
 # - not already nologin
 # - not narcissistic
 fn_parse_system_users \
-| union      <( fn_parse_ftp_users | sort ) \
+| union      <( fn_parse_ftp_users ) \
+| sort | uniq \
 | difference <( fn_parse_nologin_users | sort ) \
 | difference <( fn_parse_narcissist_users | sort ) \
   > "$SCRATCH"_to_block
@@ -942,7 +943,8 @@ fn_parse_system_users \
 # - system users
 # - not already locked
 fn_parse_system_users \
-| union      <( fn_parse_ftp_users | sort ) \
+| union      <( fn_parse_ftp_users ) \
+| sort | uniq \
 | difference <( fn_parse_locked_users | sort ) \
 | difference <( fn_parse_narcissist_users | sort ) \
   > "$SCRATCH"_to_lock
