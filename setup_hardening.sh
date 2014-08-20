@@ -917,83 +917,117 @@ else
   fi
 fi
 
-exit 255 # how far we got
-
 # NSA 2.3.1.4 Block Shell and Login Access for Non-Root System Accounts
 # SECTION
 # - TESTING:
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Block Shell and Login Access for Non-Root System Accounts"
-echo "------------------------------"
+ui_section "Block Shell and Login Access for Non-Root System Accounts"
+
 modfile="/etc/passwd"
 modflag="configure_server directive 2.3.1.4"
-# List accounts that should definitely be locked
-# First step: find nonhuman users (less than 500) and ftp users (greater than 100)
-cat $modfile \
-| grep --invert-match root \
-| awk --field-separator=":" '$3 < 500 || substr($1, 1, 3) == "ftp" { print "^" $1 ":" }'  \
-  > "$SCRATCH"1
-# Second step: exclude those with "nologin"
-cat $modfile \
-| grep --file="$SCRATCH"1 \
-| awk --field-separator=":" '$NF != "/sbin/nologin" && $1 != substr($NF, length($NF) - length($1) + 1) { print $1 }' \
-  > "$SCRATCH"2
-# Third step: exclude those with locked password -- preceded by "!"
-cat /etc/shadow \
-| grep --file="$SCRATCH"1 \
-| awk --field-separator=":" 'substr($2, 1, 1) != "!" { print $1 }' \
-  > "$SCRATCH"3
-if [ -s "$SCRATCH"2 -o -s "$SCRATCH"3 ]; then 
-  echo "Lock and block login to following accounts?"
-  cat "$SCRATCH"{2,3} | tr "\n" "\t"
-  echo
-  echo "Interactively lock these non-human users and block access? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
-    echo "* BEGIN INTERACTIVE LOCK AND BLOCK *"
-    for acct in `cat "$SCRATCH"2`; do
-      echo "* Block access to account '$acct'? [y/N]"
-      read proceed
-      if [[ $proceed == "y" ]]; then
-	echo "* Blocking access to '$acct'."
-        usermod --shell /sbin/nologin $acct
-        >> $UNDO_FILE echo "usermod --shell" `cat "$modfilebak" | grep "^$acct:" | awk --field-separator=":" '{ print $NF }'` "$acct"
-	echo "Wrote to undo file."
+
+# Users to block login (set login to /sbin/nologin)
+# - system users or ftp users
+# - not already nologin
+# - not narcissistic
+fn_parse_system_users \
+| union      <( fn_parse_ftp_users | sort ) \
+| difference <( fn_parse_nologin_users | sort ) \
+| difference <( fn_parse_narcissist_users | sort ) \
+| cut --delimiter=':' --fields=1
+  > "$SCRATCH"_to_block
+
+# Users to lock
+# - system users
+# - not already locked
+fn_parse_system_users \
+| union      <( fn_parse_ftp_users | sort ) \
+| difference <( fn_parse_locked_users | sort ) \
+| difference <( fn_parse_narcissist_users | sort ) \
+| cut --delimiter=':' --fields=1
+  > "$SCRATCH"_to_lock
+
+if [ 0 == `cat "$SCRATCH"_to_{b,}lock | wc -l` ]; then 
+  ui_print_note "No offending users found."
+else
+  ui_print_note "Following accounts should be locked and/or blocked:"
+  sed 's/^/- /' "$SCRATCH"
+
+  source <( 
+    ui_prompt_macro "Interactively lock these non-human users and block access? [y/N/f]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, did not proceed."
+  else
+    #backup
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    ui_start_task "Interactive block login"
+
+    for acct in `cat "$SCRATCH"_to_block`; do
+      if [ "$proceed" != "f" ]; then
+        source <(
+          ui_prompt_macro "* Block access to account '$acct'? [y/N]" proceed2 n
+        )
+      else
+        # we're in "force" mode, should use y for everything
+        proceed2="y" # force to y for all of them
+      fi
+
+      if [ "$proceed2" == "y" ]; then
+        # Grab last field as login
+        oldlogin="$(fn_get_user_login $acct)"
+        usermod --shell /sbin/nologin "$acct"
+	ui_print_note "* Blocked access to '$acct'."
+        >> $UNDO_FILE echo "usermod --shell '$oldlogin' '$acct' "
+	ui_print_note "* Wrote undo file."
       else
         echo "OK, no action taken."
       fi
     done
+
+    ui_end_task "Interactive block login"
+
+    ui_start_task "Interactive lock passwords"
+
     for acct in `cat "$SCRATCH"3`; do
-      echo "* Lock password to account '$acct'? [y/N]"
-      read proceed
-      if [[ $proceed == "y" ]]; then
-	echo "* Locked password for '$acct'."
+      if [ "$proceed" != "f" ]; then
+        source <(
+          ui_prompt_macro "* Lock password for account '$acct'? [y/N]" proceed2 n
+        )
+      else
+        # we're in "force" mode, should use y for everything
+        proceed2="y" # force to y for all of them
+      fi
+
+      if [ "$proceed2" == "y" ]; then
+	ui_print_note "* Locked password for '$acct'."
         usermod --lock $acct
         >> $UNDO_FILE echo "usermod --unlock '$acct'"
-	echo "Wrote to undo file."
+	ui_print_note "Wrote undo file."
       else
-        echo "OK, no action taken."
+        ui_print_note "OK, no action taken."
       fi
     done
-    echo "* END OF INTERACTIVE LOCK AND BLOCK *"
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
-    (( ++ACTIONS_COUNTER ))
-    >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
+    ui_end_task "Interactive lock passwords"
+
+    modfile_saveAfter_callback
+
   else
     echo "OK, no changes made."
   fi
+
 else
   echo "No changes necessary."
 fi
+
+exit 255 # how far we got
 
 # NSA 2.3.1.5 Verify Proper Storage and Existence of Password Hashes
 # SECTION
