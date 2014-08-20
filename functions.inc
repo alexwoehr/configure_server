@@ -39,7 +39,7 @@ fn_get_user_login() {
 fn_parse_system_users() {
   cat /etc/passwd \
   | grep --invert-match ^root: \
-  | awk --field-separator=":" '$3 < 500 { print $1 }' 
+  | awk --field-separator=":" '$3 < 500' 
 }
 
 # List accounts that should definitely be locked
