@@ -775,7 +775,14 @@ if [ 0 == $(grep "^$wheelgroup:" "$modfile" | wc -l ) ]; then
 
   if [ "$proceed" == "y" ]; then
     ui_print_note "Adding new group..."
+
+    # Add group
     groupadd "$wheelgroup"
+
+    # Restrict users from entering group via newgrp or chgrp
+    gpasswd --restrict "$wheelgroup"
+
+    ui_print_note "OK, created '$wheelgroup' group."
 
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
