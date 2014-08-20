@@ -56,6 +56,13 @@ ui_print_note() {
   echo "--- $note"
 }
 
+# Function: ui_print_list
+# Description: Format a stream (separated by linebreaks) into a list of items
+
+ui_print_list() {
+  sed 's/^/- /' -- "$@"
+}
+
 # Function: ui_proceed
 # Description: Offer choices
 

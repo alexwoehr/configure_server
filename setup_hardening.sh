@@ -683,7 +683,7 @@ if [ 0 '==' $(wc -l < "$SCRATCH") ]; then
   ui_print_note "Nothing to do."
 else
   ui_print_note "The following extraneous consoles have been discovered:"
-  cat "$SCRATCH" | sed 's/^/- /'
+  ui_print_list "$SCRATCH"
 
   source <(
     ui_prompt_macro "Remove these items interactively? [y/N/f]
@@ -953,7 +953,7 @@ if [ 0 == `cat "$SCRATCH"_to_{b,}lock | wc -l` ]; then
   ui_print_note "No offending users found."
 else
   ui_print_note "Following accounts should be locked and/or blocked:"
-  sed 's/^/- /' <( sort "$SCRATCH"_to_{b,}lock | uniq)
+  ui_print_list <( sort "$SCRATCH"_to_{b,}lock | uniq)
 
   source <( 
     ui_prompt_macro "Interactively lock these non-human users and block access? [y/N/f]" proceed n
@@ -1041,7 +1041,7 @@ if [ 0 == `cat "$SCRATCH" | wc -l` ]; then
   ui_print_note "No empty passwords found."
 else
   ui_print_note "Passwords are empty for following accounts:"
-  sed 's/^/- /' $SCRATCH
+  ui_print_list $SCRATCH
   echo "Reenter passwords for these users? [y/N]"
   source <(
     ui_prompt_macro "Reenter passwords for these users? [y/N]" proceed n
@@ -1057,7 +1057,7 @@ else
 
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Following users had empty passwords, not reverting...' "
-    >> $UNDO_FILE sed 's/^/- /' "$SCRATCH" 
+    >> $UNDO_FILE ui_print_list "$SCRATCH" 
     ui_print_note "Wrote undo file (with no-op)."
   fi
 fi
@@ -1081,10 +1081,8 @@ if [ 0 == `cat "$SCRATCH" | wc -l` ]; then
   ui_print_note "No offending users found."
 else
   ui_print_note "WARNING"
-  ui_print_note "Invalid passwords for following files were discovered:"
-  sed 's/^/- /' "$SCRATCH"
-  ui_print_note
-  read proceed
+  ui_print_note "Invalid passwords for following users were discovered:"
+  ui_print_list "$SCRATCH"
   source <( 
     ui_prompt_macro  "Reenter passwords for these users? [y/N]" proceed n
   )
