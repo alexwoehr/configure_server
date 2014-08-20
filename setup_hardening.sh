@@ -1106,6 +1106,8 @@ else
   fi
 fi
 
+ui_end_task "Step 2: Ensure no passwords in passwd file"
+
 exit 255 # todo: remove
 
 # NSA 2.3.1.6 Verify that No Non-Root Accounts Have UID 0
