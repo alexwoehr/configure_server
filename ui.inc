@@ -3,7 +3,7 @@
 # Description: Confirm from user that it's okay to proceed
 # 
 ui_press_any_key() {
-  echo ">>> press any key to continue <<<"
+  echo ">>> press enter to continue <<<"
   local proceed
   read proceed
 }
@@ -76,7 +76,7 @@ ui_proceed() {
     # Use default if no choice supplied
     $choice=$default_choice
   fi
-  echo "<<< OK, using $choice"
+  echo "<<< OK, you said $choice"
 }
 
 # ui_prompt_macro:
@@ -97,7 +97,7 @@ ui_prompt_macro() {
         read "$varname"
         # Substitute default value if necessary
         $varname=\${$varname:-$default_value}
-        echo "<<< OK, using \$$varname"
+        echo "<<< OK, you said \$$varname"
 END_MACRO
 
 }
