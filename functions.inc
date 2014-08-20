@@ -30,7 +30,7 @@ fn_selinux_enabled() {
 fn_get_user_login() {
   local acct="$1"
   cat /etc/passwd \
-  | awk -F: "\$1 == '$acct' {print \$NF}"
+  | awk -F: "\$1 == \"$acct\" {print \$NF}"
 }
 
 # Functions for listing different kinds of users
