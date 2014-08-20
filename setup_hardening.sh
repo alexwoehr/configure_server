@@ -936,7 +936,7 @@ fn_parse_system_users \
 | union      <( fn_parse_ftp_users | sort ) \
 | difference <( fn_parse_nologin_users | sort ) \
 | difference <( fn_parse_narcissist_users | sort ) \
-| cut --delimiter=':' --fields=1
+| cut --delimiter=':' --fields=1 \
   > "$SCRATCH"_to_block
 
 # Users to lock
@@ -946,7 +946,7 @@ fn_parse_system_users \
 | union      <( fn_parse_ftp_users | sort ) \
 | difference <( fn_parse_locked_users | sort ) \
 | difference <( fn_parse_narcissist_users | sort ) \
-| cut --delimiter=':' --fields=1
+| cut --delimiter=':' --fields=1 \
   > "$SCRATCH"_to_lock
 
 if [ 0 == `cat "$SCRATCH"_to_{b,}lock | wc -l` ]; then 
@@ -995,7 +995,7 @@ else
 
     ui_start_task "Interactive lock passwords"
 
-    for acct in `cat "$SCRATCH"3`; do
+    for acct in `cat "$SCRATCH"_to_lock`; do
       if [ "$proceed" != "f" ]; then
         source <(
           ui_prompt_macro "* Lock password for account '$acct'? [y/N]" proceed2 n
@@ -1019,12 +1019,8 @@ else
 
     modfile_saveAfter_callback
 
-  else
-    echo "OK, no changes made."
   fi
 
-else
-  echo "No changes necessary."
 fi
 
 exit 255 # how far we got
