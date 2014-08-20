@@ -1115,77 +1115,121 @@ fi
 
 ui_end_task "Step 2: Ensure no passwords in passwd file"
 
-exit 255 # todo: remove
-
 # NSA 2.3.1.6 Verify that No Non-Root Accounts Have UID 0
 # SECTION
 # - TESTING:
 #   - basic
-echo
-echo "------------------------------"
-echo "-- Verify that No Non-Root Accounts Have UID 0"
-echo "------------------------------"
-echo "- [untested because it is a very unlikely scenario]"
+ui_section "Verify that No Non-Root Accounts Have UID 0"
+ui_print_note "[untested because it is a very unlikely scenario]"
+
 checkfile="/etc/passwd"
 modflag="configure_server directive 2.3.1.6"
-cat $checkfile \
-| awk --field-separator=":" '$3 == "0" && $1 != "root" {print}' \
-  > $SCRATCH
-if [ -s $SCRATCH ]; then 
-  echo "Following nonroot 0 UID users were discovered. Swift removal is recommended."
-  cat $SCRATCH | tr "\n" "\t"
-  echo "Please hit ^Z and fix, then 'fg' when you are done to return to the process and press any key..."
-  read proceed
-  ###   read proceed
-  ###   if [[ $proceed == "y" ]]; then
-  ###     cat $SCRATCH | xargs --max-args=1 --delimiter="\n" passwd
-  ###     (( ++ACTIONS_COUNTER ))
-  ###     >> "$ACTIONS_TAKEN_FILE" echo $modflag
-  ###     # Append to undo file
-  ###     >> $UNDO_FILE echo "echo 'Following users had passwords in wrong place. Passwords were changed...' "
-  ###     tr "\n" "\t" $SCRATCH
-  ###     echo "Wrote undo file (with no-op)."
-  ###   else
-  ###     echo "OK, no changes made."
-  ###   fi
+cat "$checkfile" \
+| awk --field-separator=":" '$3 == "0" && $1 != "root" {print $1}' \
+  > "$SCRATCH"
+if [ 0 == `cat "$SCRATCH" | wc -l` ]; then 
+  ui_print_note "No offending users found."
 else
-  echo "No changes necessary."
+  ui_print_note "Following accounts have invalid user id and should be removed:"
+  ui_print_list "$SCRATCH"
+
+  source <( 
+    ui_prompt_macro "Interactively remove these users? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, did not proceed."
+  else
+
+    #backup some information
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    ui_start_task "Interactively remove users"
+
+    for acct in `cat "$SCRATCH"`; do
+      source <(
+        ui_prompt_macro "* DELETE account '$acct'? [y/N]" proceed2 n
+      )
+
+      if [ "$proceed2" == "y" ]; then
+        # Grab last field as login
+        ui_print_note "You must run this command:"
+        echo "userdel '$acct' && fg"
+        ui_print_note "Press Ctrl+Z, run the command, then hit enter."
+        ui_press_any_key
+
+        # Check if they successfully removed the file.
+        if [ 0 == `grep "^$acct:" /etc/passwd | wc -l` ]; then
+          ui_print_note "OK, account has been removed."
+        else 
+          ui_print_note "WARNING! You did not run the command. Please execute hardening script again."
+        fi
+
+        >> $UNDO_FILE echo "echo '$modflag'"
+        >> $UNDO_FILE echo "echo 'The following account was removed. See modfile backup for info.'"
+        >> $UNDO_FILE echo "echo - '$acct'"
+
+	ui_print_note "* Wrote undo file."
+      else
+        echo "OK, no action taken."
+      fi
+    done
+
+    ui_end_task "Interactively remove users"
+
+    modfile_saveAfter_callback
+
+  fi
+
 fi
 
 # NSA 2.3.1.7 Set Password Expiration Date Parameters
 # not implementing...
 
+ui_print_note "Skipping following directive as it is deemed unnecessary..."
+echo "NSA 2.3.1.7 Set Password Expiration Date Parameters"
+ui_press_any_key
+
 # NSA 2.3.1.8 Remove Legacy + Entries from Password Files
 # SECTION
 # - TESTING:
 #   - basic
-echo
-echo "------------------------------"
-echo "-- Remove Legacy + Entries from Password Files"
-echo "------------------------------"
-echo "- [untested because it is a very unlikely scenario]"
-checkfiles=`echo /etc/{passwd,shadow,group}`
+ui_section "Remove Legacy + Entries from Password Files"
+ui_print_note "[untested because it is a very unlikely scenario]"
+
+checkfiles=/etc/{passwd,shadow,group}
 modflag="configure_server directive 2.3.1.8"
+
 eval "grep '^+:' $checkfiles" \
-  > $SCRATCH
-if [ -s $SCRATCH ]; then 
-  echo "Following users with legacy '+' password were discovered. See $modflag NSA policy. Please address very soon."
-  cat $SCRATCH | tr "\n" "\t"
-  echo "Please hit ^Z and fix, then 'fg' when you are done to return to the process and press any key..."
-  read proceed
-  ###   read proceed
-  ###   if [[ $proceed == "y" ]]; then
-  ###     cat $SCRATCH | xargs --max-args=1 --delimiter="\n" passwd
-  ###     (( ++ACTIONS_COUNTER ))
-  ###     # Append to undo file
-  ###     >> $UNDO_FILE echo "echo 'Following users had passwords in wrong place. Passwords were changed...' "
-  ###     tr "\n" "\t" $SCRATCH
-  ###     echo "Wrote undo file (with no-op)."
-  ###   else
-  ###     echo "OK, no changes made."
-  ###   fi
+  > "$SCRATCH"
+if [ 0 == `cat "$SCRATCH" | wc -l` ]; then 
+  ui_print_note "No offending users found."
 else
-  echo "No changes necessary."
+
+  ui_print_note "WARNING"
+  ui_print_note "Invalid passwords for following users were discovered:"
+  ui_print_list "$SCRATCH"
+  source <( 
+    ui_prompt_macro  "Reenter passwords for these users? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, did not proceed."
+  else
+    # Reset all passwords
+    ui_print_note "OK, resetting these passwords."
+    cat "$SCRATCH" | xargs --max-args=1 --delimiter="\n" passwd
+
+    (( ++ACTIONS_COUNTER ))
+    >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
+    # Append to undo file
+    >> $UNDO_FILE echo "echo 'Following users had passwords in wrong place. Passwords were changed...' "
+    >> $UNDO_FILE sed 's/^/echo - /' "$SCRATCH"
+    ui_print_note "Wrote undo file (with no-op)."
+  fi
 fi
 
 # NSA 2.3.2.2 Create and Maintain a Group Containing All Human Users
