@@ -825,30 +825,32 @@ else
       fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
     )
 
-    ui_print_note "... Changing $modfile ..."
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "security=1"
+    ui_print_note "Changing $modfile ..."
 
-    # Find line number containing root privileges
-    pam_find_wheel() {
-      local cmd="$1"
-      # Print out the line number for the line we are looking for
-      cat "/etc/pam.d/$cmd" \
-      | awk '$1 == "#auth" && $2 == "required" && $3 == "pam_wheel.so" { print FNR } '
-    }
-
-    # Add line for wheel requirement
+    # Generate sed script to add line for wheel requirement
     pam_add_wheel_req_script() {
       local line="$1"
+      # Stacking behavior -- required or requisite typically
+      local stacking="${2:-required}"
       # command to append a line
       echo "${line} a\\"
       # new line: modflag
       echo "# $modflag\\"
       # new line: new configuration line
-      echo "auth	required	pam_wheel.so use_uid"
+      echo "auth	$stacking	pam_wheel.so use_uid"
     }
 
-    sed --in-place --file=<( pam_add_wheel_req_script $(pam_find_wheel su) ) /etc/pam.d/su
+    # File (filename after removing directory)
+    pam_file="${modfile##*/}"
+
+    # Line number to change
+    pam_wheel_line="$(pam_find_wheel "$pam_file")"
+
+    # Get stacking behavior: required or requisite
+    pam_wheel_stacking=`pam_get_stacking "$pam_file" "$pam_wheel_line"`
+
+    # Generate and execute sed script
+    sed --in-place --file=<( pam_add_wheel_req_script "$pam_wheel_line" "$pam_wheel_stacking" ) "$modfile"
 
     modfile_saveAfter_callback
 
