@@ -1238,36 +1238,49 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Create and Maintain a Group Containing All Human Users"
-echo "------------------------------"
+ui_section "Create and Maintain a Group Containing All Human Users"
+
 checkfile="/etc/group"
 modfile=""
 modflag="configure_server directive 2.3.2.2A"
 humansgroup=humans
-echo "- Step 1. Create humans group."
-grep "^humans:" "$checkfile" \
+
+ui_start_task "Step 1. Create humans group"
+
+grep "^$humansgroup:" "$checkfile" \
   > $SCRATCH
-if [ ! -s $SCRATCH ]; then 
-  echo "There is no '$humansgroup' group. Create it? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
+if [ 0 '<' `cat "$SCRATCH" | wc -l` ]; then
+  ui_print_note "Found group '$humansgroup'. Nothing to do."
+else
+  source <(
+    ui_prompt_macro  "No humans group ('$humansgroup') was found. Create it? [y/N]" proceed n
+  )
+
+  if [ "$proceed" == "y" ]; then
+    ui_print_note "OK, no changes made."
+  else
+
+    # Add group
     groupadd "$humansgroup"
+
+    # Restrict users from entering group via newgrp or chgrp
+    gpasswd --restrict "$humansgroup"
+
+    ui_print_note "OK, created '$humansgroup' group."
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing added '$humansgroup' group...' "
     >> $UNDO_FILE echo "groupdel '$humansgroup'"
-    echo "Wrote undo file."
-  else
-    echo "OK, no changes made."
+
+    ui_print_note "Wrote undo file."
   fi
-else
-  echo "No changes necessary."
 fi
 
-echo "- Step 2. Add users to humans group."
+ui_end_task "Step 1. Create humans group"
+
 # SECTION
 # - TESTING:
 #   - basic
