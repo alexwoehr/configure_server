@@ -1281,6 +1281,8 @@ fi
 
 ui_end_task "Step 1. Create humans group"
 
+ui_start_task "Step 2. Add users to humans group."
+
 # SECTION
 # - TESTING:
 #   - basic
@@ -1289,55 +1291,77 @@ ui_end_task "Step 1. Create humans group"
 checkfile="/etc/passwd"
 modfile=""
 modflag="configure_server directive 2.3.2.2B"
-grep "^humans:" /etc/group \
-  > "$SCRATCH"
-if [ -s $SCRATCH ]; then 
-  # Get list of users that are already in humans
-  # Create grepfile for existing humans
-  grep '^humans:' /etc/group \
-  | cut --delimiter=':' --fields="4-" \
-  | tr "," "\n" \
-  | sed 's/.*/^\0:/' \
-    > "$SCRATCH"1
+if [ "" == `fn_does_group_exist_yn "$humansgroup"` ]; then
 
-  cat $checkfile \
-  | grep --invert-match --file="$SCRATCH"1 \
-  | awk --field-separator=":" 'substr($1, 1, 4) == "root" || ($3 > 500 && substr($1, 1, 3) != "ftp") { print $1 }'  \
-    > $SCRATCH
+  ui_print_note 'No humans group found. Skipping.'
 
-  if [ -s $SCRATCH ]; then 
-    echo "These possibly human users were found. Interactively confirm to add them?"
-    cat $SCRATCH | tr "\n" "\t"
-    echo
-    echo "Proceed to interactive addition of users? [y/N]"
-    read proceed
-    if [[ $proceed == "y" ]]; then
-      for maybehuman in `cat "$SCRATCH"`; do
-        echo "* Add '$maybehuman' to '$humansgroup'? [y/N]"
-        read proceed
-        if [[ $proceed == "y" ]]; then
-          echo "* Added '$maybehuman'"
-          usermod --append --groups "$humansgroup" "$maybehuman"
-          (( ++ACTIONS_COUNTER ))
-          >> "$ACTIONS_TAKEN_FILE" echo $modflag
-          # Append to undo file
-          >> $UNDO_FILE echo "echo \"Removing '$maybehuman' from '$humansgroup'...\" "
-          >> $UNDO_FILE echo "gpasswd --delete '$maybehuman' '$humansgroup'"
-          echo "Wrote to undo file."
-        else
-          echo "* OK, '$maybehuman' was not added.";
-        fi
-      done;
-    else
-      echo "OK, not adding humans at this point."
-    fi
-  else
-    echo "No changes necessary."
-  fi
 else
-  echo "No changes necessary because you did not select to create a '$humansgroup' group."
+
+  ui_print_note "Looking for prospective human users..."
+
+  # Find users that aren't in humans but should be.
+
+  # Prime the pump
+  > "$SCRATCH"
+  echo "root" >> "$SCRATCH"
+
+  # Add more people
+  cat "$checkfile" \
+  | cut --fields=1 --delimiter=":" \
+  | sort \
+  | difference <( fn_list_addl_users_in_group "$humansgroup" | sort ) \
+  | difference <( fn_parse_system_users | sort ) \
+  | difference <( fn_parse_ftp_users | sort ) \
+    >> $SCRATCH
+
+  if [ 0 == `cat "$SCRATCH" | wc -l` ]; then
+    ui_print_note "No potentially human users found, that are not already added."
+  else
+    ui_print_note "These possibly human users were found:"
+    ui_print_list "$SCRATCH"
+
+    source <(
+      ui_prompt_macro "Interactively confirm to add them? [y/N]" proceed n
+    )
+
+    if [ "$proceed" != "y" ]; then
+      ui_print_note "OK, skipping."
+    else
+
+      ui_start_task "Interactively add human users"
+
+      for acct in `cat "$SCRATCH"`; do
+        if [ "$proceed" != "f" ]; then
+          source <(
+            ui_prompt_macro "* Add user '$acct' to group '$humansgroup'? [y/N]" proceed2 n
+          )
+        else
+          # we're in "force" mode, should use y for everything
+          proceed2="y" # force to y for all of them
+        fi
+
+        if [ "$proceed2" == "y" ]; then
+          gpasswd --add "$acct" "$humansgroup"
+          ui_print_note "* Added user '$acct' to '$humansgroup'."
+
+          (( ++ACTIONS_COUNTER ))
+          >> "$ACTIONS_TAKEN_FILE" echo $modflag "(account $acct)"
+
+          >> $UNDO_FILE echo "echo 'Removing user '$acct' from '$humansgroup'..."
+          >> $UNDO_FILE echo "gpasswd --delete '$acct' '$humansgroup' "
+          ui_print_note "* Wrote undo file."
+        else
+          echo "OK, no action taken."
+        fi
+      done
+
+      ui_end_task "Interactively add human users"
+
+    fi
+  fi
 fi
 
+ui_end_task "Step 2. Add users to humans group."
 # STATUS: ignoring pam changes for now
 ####    # NSA 2.3.3.1 Set Password Quality Requirements
 ####    echo
