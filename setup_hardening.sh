@@ -936,7 +936,6 @@ fn_parse_system_users \
 | union      <( fn_parse_ftp_users | sort ) \
 | difference <( fn_parse_nologin_users | sort ) \
 | difference <( fn_parse_narcissist_users | sort ) \
-| cut --delimiter=':' --fields=1 \
   > "$SCRATCH"_to_block
 
 # Users to lock
@@ -946,7 +945,6 @@ fn_parse_system_users \
 | union      <( fn_parse_ftp_users | sort ) \
 | difference <( fn_parse_locked_users | sort ) \
 | difference <( fn_parse_narcissist_users | sort ) \
-| cut --delimiter=':' --fields=1 \
   > "$SCRATCH"_to_lock
 
 if [ 0 == `cat "$SCRATCH"_to_{b,}lock | wc -l` ]; then 
