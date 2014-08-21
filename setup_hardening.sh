@@ -1887,48 +1887,63 @@ fi
 # - TESTING:
 #   - basic
 #   - force fix
-echo
-echo "------------------------------"
-echo "-- Confirm existence and Permissions of Log Files"
-echo "------------------------------"
-echo "- Step 1: Modfying /etc/rsyslog.conf"
+ui_section "Confirm existence and Permissions of Log Files"
+ui_start_task "Step 1: Modfying /etc/rsyslog.conf"
 echo "This must be done manually."
 echo "Please hit ^Z and fix, then 'fg' when you are done to return to the process and press any key..."
 read proceed
-echo "- Step 2: Check that log files exist"
+ui_end_task "Step 1: Modfying /etc/rsyslog.conf"
+
+ui_start_task "Step 2: Check that log files exist"
 modfile="/etc/rsyslog.conf"
 modflag="configure_server directive 2.6.1.2.4"
+
+# Accumulate list of files from rsyslog
 cat "$modfile" \
 | grep -v -e ^$ -e ^# -e ^\\$ \
 | awk '{print $NF}' \
 | grep -v -e "\\*" -e ^- \
   > "$SCRATCH"
-if [ -s $SCRATCH ]; then 
-  echo "(NOTE: This action cannot be undone.)"
-  echo "Interactively verify log files? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
+
+if [ 0 == `cat "$SCRATCH" | wc -l` ]; then
+  ui_print_note "No changes necessary."
+else 
+  ui_print_note "(NOTE: This action cannot be undone.)"
+  source <(
+    ui_prompt_macro "Interactively verify log files? [y/N/f]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    echo "OK, no changes made."
+  else
     for file in `cat "$SCRATCH"`; do
-      echo "* Verify file '$file'?"
-      read proceed
-      if [[ $proceed == "y" ]]; then
+      if [ "$proceed" == "f"]; then
+        # Forced to YES
+        proceed="y"
+      else
+        source <(
+          ui_prompt_macro "* Verify file '$file'? [y/N]" proceed2 n
+        )
+      fi
+
+      if [ "$proceed2" != "y" ]; then
+        ui_print_note "* OK, no changes made."
+      else
 	mkdir --parents ${file%/*}
         touch "$file"
 	chown root:root "$file"
 	chmod 0600 "$file"
-      else
-        echo "* OK, no changes made."
       fi
     done
-    cp $modfile $modfile.save-after_setup-`date +%F`
+
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
-  else
-    echo "OK, no changes made."
   fi
-else
-  echo "No changes necessary."
 fi
+
+ui_end_task "Step 2: Check that log files exist"
 
 # NSA 2.6.1.3 Logrotate
 # SECTION
