@@ -2070,16 +2070,19 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "--  Restrict Permissions on Files Used by cron"
-echo "------------------------------"
+ui_section "Restrict Permissions on Files Used by cron"
+
 modfile=""
 modflag="configure_server directive 3.4.2"
-echo "Make permissions changes for cron files? (There is no undo) [y/N]"
-read proceed
-if [[ $proceed == "y" ]]; then
-  echo "Ok, fixing permissions. (Note there may be errors from missing files or directories.)"
+
+source <(
+  ui_prompt_macro "Make permissions changes for cron files? (There is no undo) [y/N]"
+)
+
+if [ "$proceed" != "y" ]; then
+  ui_print_note "Ok, skipping."
+else
+  ui_print_note "Ok, fixing permissions. (Note there may be errors from missing files or directories.)"
   chown root:root /etc/crontab
   chmod 600 /etc/crontab
   chown root:root /etc/anacrontab
@@ -2088,168 +2091,176 @@ if [[ $proceed == "y" ]]; then
   chmod -R go-rwx /etc/{cron.hourly,cron.daily,cron.weekly,cron.monthly,cron.d}
   chown root:root /var/spool/cron
   chmod -R go-rwx /var/spool/cron
+
   (( ++ACTIONS_COUNTER ))
-  >> "$ACTIONS_TAKEN_FILE" echo $modflag
-else
-  echo "OK, no changes made."
+  >> "$ACTIONS_TAKEN_FILE" echo "$modflag"
+
 fi
 
 # NSA ??? Cron allow, deny
-echo
-echo "------------------------------"
-echo "--  Cron allow, deny"
-echo "------------------------------"
+ui_section "Cron allow, deny"
 echo "You must manually make any changes to cron.allow/deny. Press ^Z now if you wish, then hit enter when you come back."
 echo "-- press any key to continue --"
 read proceed
 
 
 # NSA 3.5.2 SSHD Configuration
-echo
-echo "------------------------------"
-echo "-- Configure SSH Server"
-echo "------------------------------"
+ui_section "Configure SSH Server"
+
 modfile="/etc/ssh/sshd_config"
 modflag="configure_server directive 3.5.2"
-cat "$modfile" \
-| grep "$modflag$" \
-  > "$SCRATCH"
-if [ ! -s $SCRATCH ]; then 
-  echo "Add configuration to SSH server? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "Protocol 2"
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "allowgroups humans"
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "IgnoreRhosts yes"
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "HostbasedAuthentication no"
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "PermitRootLogin no"
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "PermitEmptyPasswords no"
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "PermitUserEnvironment no"
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
+
+if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+  ui_print_note "Changes already made. Nothing to do."
+else
+  source <(
+    ui_prompt_macro "Add configuration to SSH server? [y/N]" proceed n
+  )
+  
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, no action taken."
+  else
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    >> "$modfile" cat <<END_FLAGS
+# $modflag
+Protocol 2
+# $modflag
+allowgroups humans
+# $modflag
+IgnoreRhosts yes
+# $modflag
+HostbasedAuthentication no
+# $modflag
+PermitRootLogin no
+# $modflag
+PermitEmptyPasswords no
+# $modflag
+PermitUserEnvironment no
+END_FLAGS
+
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing additions to SSH server...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-  else
-    echo "OK, no changes made."
+    ui_print_note "Wrote undo file."
   fi
-else
-  echo "Changes already made."
 fi
 
 # NSA 3.6.1 Disable X Windows
-echo
-echo "------------------------------"
-echo "-- Disable X Windows RunLevel"
-echo "------------------------------"
-echo "- Step 1: Check inittab runlevel"
+ui_section "Disable X Windows RunLevel"
+ui_start_task "Step 1: Check inittab runlevel"
+
 modfile="/etc/inittab"
 modflag="configure_server directive 3.6.1"
+
 cat "$modfile" \
 | awk --field-separator=":" '$2 != "3" && $3 == "initdefault" { print }' \
   > "$SCRATCH"
-if [ -s $SCRATCH ]; then 
-  echo "WARNING: Wrong run level in /etc/inittab. Please ^Z and fix, then hit enter when you're back."
+
+if [ -s $SCRATCH ]; then
+  ui_print_note "WARNING: Wrong run level in /etc/inittab. Please ^Z and fix, then hit enter when you're back."
   echo "-- press any key to continue --"
   read proceed
 else
-  echo "Changes already made."
+  ui_print_note "Changes already made."
 fi
 
-echo "- Step 2: Remove all packages"
-echo "Proceed to remove all X11 packages? [y/N]"
-read proceed
-if [[ $proceed == "y" ]]; then
-  yum groupremove "X Windows System"
-else
+ui_end_task "Step 1: Check inittab runlevel"
+
+ui_start_task "Step 2: Remove all packages"
+source <(
+  ui_prompt_macro "Proceed to remove all X11 packages? [y/N]" proceed n
+)
+
+if [ "$proceed" != "y" ]; then
   echo "OK, no changes made."
+else
+  yum groupremove "X Windows System"
 fi
 
 # NSA 3.11.2.2 Conﬁgure Sendmail for Submission-Only Mode
-echo
-echo "------------------------------"
-echo "-- Configure Sendmail for Submission-Only Mode"
-echo "------------------------------"
+ui_section "Configure Sendmail for Submission-Only Mode"
+
 modfile="/etc/sysconfig/sendmail"
 modflag="configure_server directive 3.11.2.2"
 yum list installed \
 | grep sendmail\\. \
   > "$SCRATCH"
+
 if [ -s $SCRATCH ]; then
+  ui_print_note "Application not installed. Nothing to do."
+else
   # Check if changes have already been made.
-  cat "$modfile" \
-  | grep "$modflag$" \
-    > "$SCRATCH"
-  if [ ! -s $SCRATCH ]; then 
-    echo "Setup submission-only mode in sendmail? [y/N]"
-    read proceed
-    if [[ $proceed == "y" ]]; then
-      # Save old file
-      modfilebak="$modfile".save-before_setup-`date +%F`
-      if [ ! -e "$modfilebak" ]; then
-        cp $modfile $modfilebak
-      fi
+  if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+    ui_print_note "Changes already made. Nothing to do."
+  else
+    source <(
+      ui_prompt_macro "Setup submission-only mode in sendmail? [y/N]" proceed n
+    )
+
+    if [ "$proceed" != "y" ]; then
+      ui_print_note "OK, no changes made."
+    else
+      source <(
+        fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+      )
+
       >> $modfile echo "# $modflag"
       >> $modfile echo "DAEMON=no"
-      # Save new file
-      cp $modfile $modfile.save-after_setup-`date +%F`
+      
+      modfile_saveAfter_callback
+
       (( ++ACTIONS_COUNTER ))
       >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
       # Append to undo file
       >> $UNDO_FILE echo "echo 'Removing additions to SSH server...' "
       >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-    else
-      echo "OK, no changes made."
+      ui_print_note "Wrote undo file."
     fi
-  else
-    echo "Changes already made."
   fi
-else
-  echo "sendmail is not installed, nothing to do."
 fi
 
 # NSA 3.15A VSFTP installation
-echo
-echo "------------------------------"
-echo "-- FTP configuration (vsftpd)"
-echo "------------------------------"
+ui_section "FTP configuration (vsftpd)"
+
 modfile=""
 modflag="configure_server directive 3.15A"
-echo "Checking if vsftpd is installed..."
+ui_print_note "Checking if vsftpd is installed..."
 yum list installed \
 | grep vsftpd\\. \
   > "$SCRATCH"
+
 if [ ! -s $SCRATCH ]; then
-  echo "vsftpd may not be installed. Install it? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    echo "OK, installing."
-    yum --assumeyes install vsftpd
+  ui_print_note "vsftpd is installed."
+else
+  source <(
+    ui_prompt_macro "vsftpd may not be installed. Install it? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, no changes made."
+  else
+    ui_print_note "OK, installing."
+
+    yum --assumeyes install vsftpd \
+    | ui_escape_output "yum"
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing installation of vsftpd...' "
     >> $UNDO_FILE echo "yum --assumeyes remove vsftpd"
-    echo "Wrote undo file."
-  else
-    echo "OK, no changes made."
+    ui_print_note "Wrote undo file."
   fi
-else
-  echo "vsftpd is installed."
 fi
 
 # TODO: Actually just append the sample file to the end of default configuration.
