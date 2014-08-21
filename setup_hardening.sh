@@ -1725,20 +1725,26 @@ else
 fi
 
 ui_end_task "Step 1: Copy sample file"
+
+ui_start_task "Step 2: Add iptables-init script"
 script="configure_server.iptables-init.sh"
-echo "Copy and install the iptables-init script?"
-read proceed
-if [[ $proceed == "y" ]]; then
-  echo "... Installing ..."
-  $LIB_DIR/install_a_script.sh $script \
-  | sed 's/.*/[installing script] \0/'
-  (( ++ACTIONS_COUNTER ))
-  >> "$ACTIONS_TAKEN_FILE" echo $modflag
-  >> $UNDO_FILE echo "echo '### $modflag ###' "
-  >> $UNDO_FILE echo "echo 'Restoring old iptables file...' "
-  >> $UNDO_FILE echo "cp $modfilebak $modfile"
+source <(
+  ui_prompt_macro "Copy and install the iptables-init script?" proceed n
+)
+if [ "$proceed" != "y" ]; then
+  ui_print_note "OK, no changes made."
 else
-  echo "OK, no changes made."
+  ui_print_note "Installing iptables-init.sh ..."
+
+  "$LIB_DIR"/install_a_script.sh "$script" \
+  | ui_escape_output "install_a_script"
+
+  (( ++ACTIONS_COUNTER ))
+  >> "$ACTIONS_TAKEN_FILE" echo "$modflag"
+
+  >> $UNDO_FILE echo "echo '### $modflag ###' "
+  >> $UNDO_FILE echo "echo 'Removing iptables-init.sh...' "
+  >> $UNDO_FILE echo "rm `which iptables-init.sh` "
 fi
 
 # TODO: TEST
