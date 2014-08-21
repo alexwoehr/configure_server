@@ -1953,8 +1953,6 @@ else
       fi
     done
 
-    modfile_saveAfter_callback
-
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
   fi
