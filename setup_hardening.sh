@@ -1709,7 +1709,7 @@ modfile=/etc/sysconfig/iptables
 modflag="configure_server directive 2.5.5A iptables"
 ui_start_task "Step 1: Copy sample file"
 source <(
-  ui_prompt_macro "Copy the iptables sample to the config directory? [y/N]" proceed n
+  ui_prompt_macro "Copy the iptables sample to the sysconfig directory? [y/N]" proceed n
 )
 if [ "$proceed" != "y" ]; then
   ui_print_note "OK, no changes made."
