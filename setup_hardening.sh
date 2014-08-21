@@ -1859,7 +1859,7 @@ ui_section "Uncommon Network Protocols"
 
 modfile="/etc/modprobe.d/configure_server.exclusions.modprobe.conf"
 modflag="configure_server directive 2.5.7"
-if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+if [ 0 '<' `grep "$modflag"$ "$modfile" | wc -l` ]; then
   ui_print_note "Changes already made. Nothing to do."
 else
 
@@ -2048,7 +2048,7 @@ ui_section "Bluetooth"
 modfile="/etc/modprobe.d/configure_server.exclusions.modprobe.conf"
 modflag="configure_server directive 3.3.14.3"
 
-if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+if [ 0 '<' `grep "$modflag"$ "$modfile" | wc -l` ]; then
   ui_print_note "OK, nothing to do."
 else
   source <(
@@ -2127,7 +2127,7 @@ ui_section "Configure SSH Server"
 modfile="/etc/ssh/sshd_config"
 modflag="configure_server directive 3.5.2"
 
-if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+if [ 0 '<' `grep "$modflag"$ "$modfile" | wc -l` ]; then
   ui_print_note "Changes already made. Nothing to do."
 else
   source <(
@@ -2215,7 +2215,7 @@ if [ -s $SCRATCH ]; then
   ui_print_note "Application not installed. Nothing to do."
 else
   # Check if changes have already been made.
-  if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+  if [ 0 '<' `grep "$modflag"$ "$modfile" | wc -l` ]; then
     ui_print_note "Changes already made. Nothing to do."
   else
     source <(
