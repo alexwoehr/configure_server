@@ -1695,32 +1695,36 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- IPTABLES"
-echo "------------------------------"
+ui_section "IPTABLES"
+
 modfile=/etc/sysconfig/iptables
 modflag="configure_server directive 2.5.5A iptables"
-echo "- Step 1: Copy sample file"
-echo "Copy the iptables sample to the config directory? [y/N]"
-read proceed
-if [[ $proceed == "y" ]]; then
-  # Save old file
-  modfilebak="$modfile".save-before_setup-`date +%F`
-  if [ ! -e "$modfilebak" ]; then
-    cp $modfile $modfilebak
-  fi
-  cp $LIB_DIR/samples/iptables /etc/sysconfig/iptables
-  cp $modfile $modfile.save-after_setup-`date +%F`
+ui_start_task "Step 1: Copy sample file"
+source <(
+  ui_prompt_macro "Copy the iptables sample to the config directory? [y/N]" proceed n
+)
+if [ "$proceed" != "y" ]; then
+  ui_print_note "OK, no changes made."
+else
+  source <(
+    fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+  )
+
+  cp "$LIB_DIR"/samples/iptables /etc/sysconfig/iptables
+
+  ui_print_note "Please inspect the new iptables firewall."
+  ui_press_any_key
+
+  modfile_saveAfter_callback
+
   (( ++ACTIONS_COUNTER ))
   >> "$ACTIONS_TAKEN_FILE" echo $modflag
   >> $UNDO_FILE echo "echo '### $modflag ###' "
   >> $UNDO_FILE echo "echo 'Restoring old iptables file...' "
   >> $UNDO_FILE echo "cp $modfilebak $modfile"
-else
-  echo "OK, no changes made."
 fi
-echo "- Step 2: Add iptables-init script"
+
+ui_end_task "Step 1: Copy sample file"
 script="configure_server.iptables-init.sh"
 echo "Copy and install the iptables-init script?"
 read proceed
