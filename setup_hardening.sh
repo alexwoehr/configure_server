@@ -1369,7 +1369,6 @@ ui_section "Set Password Quality Requirements"
 
 modfile="/etc/pam.d/system-auth"
 modflag="configure_server directive 2.3.3.1"
-| grep "$modflag"$ \
 if [ 0 '<' `grep "$modflag"$ "$modfile" | wc -l` ]; then
   ui_print_note "Requirements already set."
 else
