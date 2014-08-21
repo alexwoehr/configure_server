@@ -1934,7 +1934,7 @@ else
     echo "OK, no changes made."
   else
     for file in `cat "$SCRATCH"`; do
-      if [ "$proceed" == "f"]; then
+      if [ "$proceed" == "f" ]; then
         # Forced to YES
         proceed="y"
       else
