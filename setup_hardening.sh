@@ -1785,25 +1785,34 @@ else
     ui_print_note "OK, no changes made."
   else
     ui_start_task "Installing fwsnort..."
-    mkdir /opt && chcon --type="usr_t" /opt
+
+    if [ ! -e /opt ]; then
+      mkdir /opt
+      chcon --type="usr_t" /opt
+    fi
+
     source <(
-      "Which version of fwsnort to grab? [1.6.4]" proceed "1.6.4"
+      ui_prompt_macro "Which version of fwsnort to grab? [1.6.4]" proceed "1.6.4"
     )
 
     ui_print_note "Downloading http://cipherdyne.com/fwsnort/download/fwsnort-$fwsnort_version.tar.gz"
     wget http://cipherdyne.com/fwsnort/download/fwsnort-"$fwsnort_version".tar.gz -O /opt/fwsnort-"$fwsnort_version".tar.gz \
-    | ui_escape_output "wget"
+    2>& 1 | ui_escape_output "wget"
+
     cd /opt && tar xzf fwsnort-"$fwsnort_version".tar.gz
+
     ui_print_note "Installing perl and perl-CPAN ..."
+
     yum --assumeyes install gcc perl{,-CPAN} | sed 's/.*/[yum says] \0/'
     ui_start_task "Setting up dependencies for fwsnort"
-    cd /opt/fwsnort-"$fwsnort_version"/deps \
+    pushd /opt/fwsnort-"$fwsnort_version"/deps \
     && for file in `ls -d | grep -v -e snort_rules -e whois`; do
       ui_start_task "Installing module $file"
       (cd $file && perl Makefile.PL && make && make install && cd ..) \
       | sed 's/.*/[installers] \0/'
       ui_end_task "Installing module $file"
     done
+    popd # return
     ui_end_task "Setting up dependencies for fwsnort"
 
     # Finally, install fwsnort itself
