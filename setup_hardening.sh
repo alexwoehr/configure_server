@@ -1597,61 +1597,66 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Kernel Parameters which Affect Networking: Network Parameters for Hosts and Routers"
-echo "------------------------------"
+ui_section "Kernel Parameters which Affect Networking: Network Parameters for Hosts and Routers"
+
 modfile="/etc/sysctl.conf"
 modflag="configure_server directive 2.5.1.2"
-grep "$modflag" "$modfile" \
-  > $SCRATCH
-if [ ! -s $SCRATCH ]; then 
-  echo "We have not yet added log_martians to '$modfile'. Change it? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.all.log_martians = 1"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.all.accept_source_route = 0"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.all.accept_redirects = 0"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.all.secure_redirects = 0"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.all.log_martians = 1"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.default.accept_source_route = 0"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.default.accept_redirects = 0"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.default.secure_redirects = 0"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.icmp_echo_ignore_broadcasts = 1"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.icmp_ignore_bogus_error_messages = 1"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.tcp_syncookies = 1"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.all.rp_filter = 1"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.default.rp_filter = 1"
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
+
+if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+  ui_print_note "Changes already made. Nothing to do."
+else
+  source <(
+    ui_prompt_macro "We have not yet added these restrictions to '$modfile'. Change it? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, skipping."
+  else
+    # Backup old file
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    >> "$modfile" cat <<END_FLAGS
+# $modflag
+net.ipv4.conf.all.log_martians = 1
+# $modflag
+net.ipv4.conf.all.accept_source_route = 0
+# $modflag
+net.ipv4.conf.all.accept_redirects = 0
+# $modflag
+net.ipv4.conf.all.secure_redirects = 0
+# $modflag
+net.ipv4.conf.all.log_martians = 1
+# $modflag
+net.ipv4.conf.default.accept_source_route = 0
+# $modflag
+net.ipv4.conf.default.accept_redirects = 0
+# $modflag
+net.ipv4.conf.default.secure_redirects = 0
+# $modflag
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+# $modflag
+net.ipv4.icmp_ignore_bogus_error_messages = 1
+# $modflag
+net.ipv4.tcp_syncookies = 1
+# $modflag
+net.ipv4.conf.all.rp_filter = 1
+# $modflag
+net.ipv4.conf.default.rp_filter = 1
+END_FLAGS
+
+    ui_print_note "Added restrictions."
+
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
-    >> $UNDO_FILE echo "echo 'Removing log_martians...' "
+    >> $UNDO_FILE echo "echo 'Removing $modflag sysctl restrictions for hosts / routers ...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-  else
-    echo "OK, no changes made."
   fi
-else
-  echo "No changes necessary."
 fi
 
 # NSA 2.5.1.3 Ensure System is Not Acting as a Network Sniffer
