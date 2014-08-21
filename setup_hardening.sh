@@ -1875,7 +1875,7 @@ else
       fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
     )
 
-    cat <<END_FLAGS >> "$modfile"
+    >> "$modfile" cat <<END_FLAGS
 # $modflag
 install dccp /bin/true
 # $modflag
