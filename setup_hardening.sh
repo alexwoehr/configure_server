@@ -1548,42 +1548,47 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Kernel Parameters which Affect Networking: Network Parameters for Hosts Only"
-echo "------------------------------"
+ui_section "Kernel Parameters which Affect Networking: Network Parameters for Hosts Only"
+
 modfile="/etc/sysctl.conf"
 modflag="configure_server directive 2.5.1.1"
-grep "$modflag" "$modfile" \
-  > $SCRATCH
-if [ ! -s $SCRATCH ]; then 
-  echo "We have not yet changed forwarding in '$modfile'. Change it? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp "$modfile" "$modfilebak"
-    fi
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.ip forward = 0"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.all.send redirects = 0"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "net.ipv4.conf.default.send redirects = 0"
-    echo "OK, $modfile changed."
+
+if [ 0 '<' $(grep "$modflag"$ "$modfile" | wc -l) ]; then
+  ui_print_note "Changes already made. Nothing to do."
+else
+  source <(
+    ui_prompt_macro "We have not yet changed forwarding in '$modfile'. Change it? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, no changes made."
+  else
+
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    >> "$modfile" cat <<END_FLAGS
+# $modflag
+net.ipv4.ip forward = 0
+# $modflag
+net.ipv4.conf.all.send redirects = 0
+# $modflag
+net.ipv4.conf.default.send redirects = 0
+END_FLAGS
+
+    ui_print_note "OK, $modfile changed."
+
     # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing forwarding prevention rules...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-  else
-    echo "OK, no changes made."
+    ui_print_note "Wrote undo file."
   fi
-else
-  echo "No changes necessary."
 fi
 
 # NSA 2.5.1.2 Kernel Parameters which Affect Networking: Network Parameters for Hosts and Routers
