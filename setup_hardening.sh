@@ -1469,7 +1469,7 @@ else
 
   if [ "$proceed" == "y" ]; then
     # Create script
-    >  $modfile cat <<<END_SCRIPT
+    > $modfile cat <<END_SCRIPT
 #!/bin/bash
 # $modflag
 TMOUT=36000
