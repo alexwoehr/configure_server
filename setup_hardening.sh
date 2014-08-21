@@ -1768,7 +1768,7 @@ modflag="Setup fwsnort"
 modfile=""
 checkfile=""
 # [B] Header
-ui_section "$modflag"
+ui_section "$modflag (BELIEVED NOT TO WORK)"
 # [C] check if we need to make our change
 ui_print_note "Checking whether to make changes or not..."
 
@@ -1816,7 +1816,7 @@ else
     ui_end_task "Setting up dependencies for fwsnort"
 
     # Finally, install fwsnort itself
-    ui_print_note "... Please complete installation process for fwsnort ..."
+    ui_print_note "Please complete installation process for fwsnort"
     ui_press_any_key
 
     /opt/fwsnort-"$fwsnort_version"/install.pl
