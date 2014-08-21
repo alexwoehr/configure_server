@@ -1949,24 +1949,26 @@ ui_end_task "Step 2: Check that log files exist"
 # SECTION
 # - TESTING:
 #   - basic
-echo
-echo "------------------------------"
-echo "-- Logrotate Configuration"
-echo "------------------------------"
+ui_section "Logrotate Configuration"
+
 checkfile="/etc/rsyslog.conf"
 modfile="/etc/logrotate.d/syslog"
 modflag="configure_server directive 2.6.1.3"
-echo "- Step 1: Modfying $modfile"
+
+ui_start_task "Step 1: Modfying $modfile"
 echo "This must be done manually."
 echo "Please hit ^Z and fix, then 'fg' when you are done to return to the process and press any key..."
 read proceed
-echo "- Step 2: Verifying all rsyslog files are covered in logrotate"
+ui_end_task "Step 1: Modfying $modfile"
+
+ui_start_task "Step 2: Verifying all rsyslog files are covered in logrotate"
 # Get list of files, again
 cat "$checkfile" \
 | grep -v -e ^$ -e ^# -e ^\\$ \
 | awk '{print $NF}' \
 | grep -v -e "\\*" -e ^- \
   > "$SCRATCH"1
+
 # Check whether each file is covered in logrotate
 cat "$modfile" \
 | grep --invert-match -e '^ ' -e "^	" \
@@ -1974,35 +1976,40 @@ cat "$modfile" \
 | grep --invert-match -e '{' -e '}' -e '^$' \
 | sed 's/.*/^\0$/' \
   > "$SCRATCH"2
+
 # Find difference
 cat "$SCRATCH"1 \
 | grep --invert-match --file="$SCRATCH"2 \
   > "$SCRATCH"
-if [ -s $SCRATCH ]; then 
-  modfilebak="$modfile".save-before_setup-`date +%F`
-  if [ ! -e "$modfilebak" ]; then
-    cp $modfile $modfilebak
-  fi
-  echo "Warning: Apparently the following syslog files are not rotated:"
-  cat "$SCRATCH" | sed 's/.*/* \0/'
-  echo
-  echo "Please hit ^Z, add them to '$modfile', and press any key when ready..."
+
+if [ -s $SCRATCH ]; then
+  source <(
+    fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+  )
+
+  ui_print_note "Warning: Apparently the following syslog files are not rotated:"
+  cat "$SCRATCH" | ui_print_list
+  ui_print_note "Please hit ^Z, add them to '$modfile', and press any key when ready..."
   read proceed
-  if [ $modfile -nt $modfilebak ]; then
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
-    echo "Changes were saved."
+  if [ "$modfile" -nt "$modfilebak" ]; then
+    modfile_saveAfter_callback
+
+    ui_print_note "Changes were saved."
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     >> $UNDO_FILE echo "echo 'Reverting changes to logrotate...' "
     >> $UNDO_FILE echo cp "$modfile.save-after_setup-`date +%F`" "$modfile"
-    echo "Wrote to undo file."
+
+    ui_print_note "Wrote to undo file."
   else
-    echo "No changes detected."
+    ui_print_note "No changes detected."
   fi
 else
-  echo "No changes necessary."
+  ui_print_note "No changes necessary."
 fi
+
+ui_end_task "Step 2: Verifying all rsyslog files are covered in logrotate"
 
 # TODO
 # CURRENTLY THE FOLLOWING IS HANDLED MANUALLY
