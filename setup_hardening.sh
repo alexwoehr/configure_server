@@ -1610,7 +1610,7 @@ ui_section "Kernel Parameters which Affect Networking: Network Parameters for Ho
 modfile="/etc/sysctl.conf"
 modflag="configure_server directive 2.5.1.2"
 
-if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+if [ 0 '<' "`grep "$modflag"$ "$modfile" | wc -l`" ]; then
   ui_print_note "Changes already made. Nothing to do."
 else
   source <(
