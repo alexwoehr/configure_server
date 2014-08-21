@@ -1362,48 +1362,65 @@ else
 fi
 
 ui_end_task "Step 2. Add users to humans group."
-# STATUS: ignoring pam changes for now
-####    # NSA 2.3.3.1 Set Password Quality Requirements
-####    echo
-####    echo "------------------------------"
-####    echo "-- Set Password Quality Requirements"
-####    echo "------------------------------"
-####    modfile="/etc/pam.d/system-auth"
-####    modflag="configure_server directive 2.3.3.1"
-####    cat $modfile \
-####    | grep "$modflag"$ \
-####    | tee $SCRATCH \
-####    && if [ ! -s $SCRATCH ]; then 
-####      # TODO: check if passwordqc already specified
-####      echo "Add password quality upgrade to pam? [y/N]"
-####      read proceed
-####      if [[ $proceed == "y" ]]; then
-####        # Save old file
-####        modfilebak="$modfile".save-before_setup-`date +%F`
-####        if [ ! -e "$modfilebak" ]; then
-####          cp $modfile $modfilebak
-####        fi
-####        >> $modfile echo "# $modflag";
-####        >> $modfile echo "password required pam_cracklib.so try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1"
-####        # Save new file
-####        cp $modfile $modfile.save-after_setup-`date +%F`
-####        (( ++ACTIONS_COUNTER ))
-####        >> "$ACTIONS_TAKEN_FILE" echo $modflag
-####        # Append to undo file
-####        >> $UNDO_FILE echo "echo 'Removing password quality requirements...' "
-####        >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-####        echo "Wrote to undo file."
-####      else
-####        echo "OK, no changes made."
-####      fi
-####    else
-####      echo "No changes necessary."
-####    fi
 
-echo "NOTE: please complete all PAM configuration manually!"
-echo "Press Enter to continue..."
-read proceed
-echo "OK, no changes made."
+# NSA 2.3.3.1 Set Password Quality Requirements
+ui_section "Set Password Quality Requirements"
+
+modfile="/etc/pam.d/system-auth"
+modflag="configure_server directive 2.3.3.1"
+| grep "$modflag"$ \
+if [ 0 '<' `grep "$modflag"$ "$modfile" | wc -l` ]; then
+  ui_print_note "Requirements already set."
+else
+  source <(
+    ui_prompt_macro "This task has not been done yet. Proceed to modify password quality requirements? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, did not proceed."
+  else
+
+    # Save backup
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    # Generate sed script to add line for wheel requirement
+    pam_add_cracklib_script() {
+      # Line to change
+      local line="$1"
+      # Stacking behavior -- required or requisite typically
+      local stacking="${2:-requisite}"
+      # command to append a line
+      echo "${line} a\\"
+      # new line: modflag
+      echo "# $modflag\\"
+      # new line: new configuration line
+      echo "password	$stacking	pam_cracklib try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1"
+    }
+
+    # File (filename after removing directory)
+    pam_file="${modfile##*/}"
+
+    # Line number to change
+    pam_wheel_line="$(pam_find_wheel "$pam_file")"
+
+    # Get stacking behavior: required or requisite
+    pam_wheel_stacking=`pam_get_stacking "$pam_file" "$pam_wheel_line"`
+
+    # Generate and execute sed script
+    sed --in-place --file=<( pam_add_wheel_req_script "$pam_wheel_line" "$pam_wheel_stacking" ) "$modfile"
+
+    modfile_saveAfter_callback
+
+    (( ++ACTIONS_COUNTER ))
+    >> "$ACTIONS_TAKEN_FILE" echo $modflag
+    # Append to undo file
+    >> $UNDO_FILE echo "echo 'Removing password quality requirements...' "
+    >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
+    ui_print_note "Wrote undo file."
+  fi
+fi
 
 # NSA 2.3.4.1 Ensure that No Dangerous Directories Exist in Root's Path
 # SECTION
