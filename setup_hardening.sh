@@ -1447,41 +1447,48 @@ ui_print_note "OK, no changes made."
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "--  Implement Inactivity Time-out for Login Shells"
-echo "------------------------------"
+ui_section "Implement Inactivity Time-out for Login Shells"
+
 modfile="/etc/profile.d/tmout.sh"
 modflag="configure_server directive 2.3.5.5"
-if [ ! -e "$modfile" ]; then 
-  echo "Inactivity timeout file is not created. Create it? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    >  $modfile
-    >> $modfile echo "#!/bin/sh"
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "TMOUT=36000"
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "readonly TMOUT"
-    >> $modfile echo "# $modflag"
-    >> $modfile echo "export TMOUT"
+
+if [ -e "$modfile" ]; then
+  ui_print_note "Inactivity script already present. No action taken."
+else
+  source <(
+    ui_prompt_macro   "Inactivity timeout file is not created. Create it? [y/N]" proceed n
+  )
+
+  if [ "$proceed" == "y" ]; then
+    # Create script
+    >  $modfile cat <<<END_SCRIPT
+#!/bin/bash
+# $modflag
+TMOUT=36000
+# $modflag
+readonly TMOUT
+# $modflag
+export TMOUT
+END_SCRIPT
+
+    # Set permissions on script
     chown root:root "$modfile"
     chmod u+rwx "$modfile"
     echo "Created '$modfile'. Contents:"
-    cat "$modfile" | sed 's/.*/* \0/'
+
+    cat "$modfile" | ui_escape_output 'cat'
+
     # Save new file
     cp $modfile $modfile.save-after_setup-`date +%F`
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo "$modflag"
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing inactivity timeout for login shells file...' "
     >> $UNDO_FILE echo "rm '$modfile'"
-  else
-    echo "OK, no changes made."
+
   fi
-else
-  echo "File already exists."
-  echo "No changes necessary."
 fi
 
 # NSA 2.3.5.6-7 skipped
