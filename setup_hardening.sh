@@ -1500,40 +1500,41 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "--  Warning Banners for System Accesses"
-echo "------------------------------"
-echo "- Two files to check: issue and issue.net"
-if [ -n `ls /etc/issue{,.net} | tr "\n" ','` ]; then
+ui_section "Warning Banners for System Accesses"
+ui_print_note "Two files to check: issue and issue.net"
+if [ -n `ls /etc/issue{,.net}` ]; then
+  ui_print_note "No banners files found."
+  ui_print_note "Nothing to do."
+else
+  modflag="configure_server directive 2.3.6"
   for modfile in /etc/issue{,.net}; do
-    modflag="configure_server directive 2.3.6"
-    if [ -s "$modfile" ]; then 
-      echo "Login banner '$modfile' has info. Remove it? [y/N]"
-      read proceed
-      if [[ $proceed == "y" ]]; then
-        # Save old file
-        modfilebak="$modfile".save-before_setup-`date +%F`
-        if [ ! -e "$modfilebak" ]; then
-          cp "$modfile" "$modfilebak"
-        fi
-        # Truncate it
+    if [ -s "$modfile" ]; then
+      source <(
+        ui_prompt_macro  "Login banner '$modfile' has info. Remove it? [y/N]" proceed n
+      )
+
+      if [ "$proceed" != "y" ]; then
+        ui_print_note "OK, $modfile not removed."
+      else
+        source <(
+          fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+        )
+
+        # Empty file
         >  $modfile
-        cp $modfile $modfile.save-after_setup-`date +%F`
+
+        modfile_saveAfter_callback
+
         (( ++ACTIONS_COUNTER ))
         >> "$ACTIONS_TAKEN_FILE" echo "$modflag"
+
         # Append to undo file
         >> $UNDO_FILE echo "echo \"Re-adding the banner '$modfile'...\" "
         >> $UNDO_FILE echo "cp '$modfilebak' '$modfile'"
-      else
-        echo "OK, no changes made."
+        ui_print_note "Wrote undo file."
       fi
-    else
-      echo "No changes necessary for $modfile."
     fi
   done
-else
-  echo "No banners files found."
 fi
 
 # NSA 2.3.7.2 skipped
