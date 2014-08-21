@@ -1312,6 +1312,7 @@ else
   | difference <( fn_list_addl_users_in_group "$humansgroup" | sort ) \
   | difference <( fn_parse_system_users | sort ) \
   | difference <( fn_parse_ftp_users | sort ) \
+  | sort | uniq \
     >> $SCRATCH
 
   if [ 0 == `cat "$SCRATCH" | wc -l` ]; then
