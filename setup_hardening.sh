@@ -1428,14 +1428,11 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Ensure that No Dangerous Directories Exist in Root's Path"
-echo "------------------------------"
+ui_section "Ensure that No Dangerous Directories Exist in Root's Path"
 echo "Please modify your bash file to edit the path, if desired."
 echo "Press Enter to continue..."
-read proceed
-echo "OK, no changes made."
+ui_press_any_key
+ui_print_note "OK, no changes made."
 
 # NSA 2.3.4.1.2 skipped
 # NSA 2.3.4.2 skipped
