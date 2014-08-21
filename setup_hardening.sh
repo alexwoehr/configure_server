@@ -1806,7 +1806,7 @@ else
     yum --assumeyes install gcc perl{,-CPAN} | sed 's/.*/[yum says] \0/'
     ui_start_task "Setting up dependencies for fwsnort"
     pushd /opt/fwsnort-"$fwsnort_version"/deps \
-    && for file in `ls -d | grep -v -e snort_rules -e whois`; do
+    && for file in `find -mindepth 1 -maxdepth 1 -type d | grep -v -e snort_rules -e whois`; do
       ui_start_task "Installing module $file"
       (cd $file && perl Makefile.PL && make && make install && cd ..) \
       | sed 's/.*/[installers] \0/'
