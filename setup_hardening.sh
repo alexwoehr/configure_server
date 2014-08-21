@@ -1665,26 +1665,26 @@ fi
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Ensure System is Not Acting as a Network Sniffer"
-echo "------------------------------"
+ui_section "Ensure System is Not Acting as a Network Sniffer"
+
 checkfile="/proc/net/packet"
 modfile=""
 modflag="configure_server directive 2.5.1.2"
-cat /proc/net/packet | wc -l > "$SCRATCH"
-if [ 1 -lt `cat "$SCRATCH"` ]; then 
-  echo "Here is the packet file. There are " `cat "$SCRATCH"` " lines in the file."
-  cat /proc/net/packet | nl | sed 's/.*/* \0/'
-  echo "Abort and investigate? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    exit 99 # aborted
-  else
-    echo "OK, no changes made."
-  fi
+if [ 1 '<' `cat /proc/net/packet | wc -l` ]; then
+  ui_print_note "System looks normal."
 else
-  echo "No changes necessary."
+  echo "Here is the packet file."
+  cat /proc/net/packet | nl | sed 's/.*/* \0/'
+
+  source <(
+    ui_prompt_macro "Abort and investigate? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, no changes made."
+  else
+    exit 99 # aborted
+  fi
 fi
 
 # NSA 2.5.4 skipped
