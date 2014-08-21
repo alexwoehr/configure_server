@@ -1409,7 +1409,7 @@ else
     pam_wheel_stacking=`pam_get_stacking "$pam_file" "$pam_wheel_line"`
 
     # Generate and execute sed script
-    sed --in-place --file=<( pam_add_wheel_req_script "$pam_wheel_line" "$pam_wheel_stacking" ) "$modfile"
+    sed --in-place --file=<( pam_add_cracklib_req_script "$pam_wheel_line" "$pam_wheel_stacking" ) "$modfile"
 
     modfile_saveAfter_callback
 
