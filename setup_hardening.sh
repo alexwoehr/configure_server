@@ -2091,7 +2091,7 @@ modfile=""
 modflag="configure_server directive 3.4.2"
 
 source <(
-  ui_prompt_macro "Make permissions changes for cron files? (There is no undo) [y/N]"
+  ui_prompt_macro "Make permissions changes for cron files? (There is no undo) [y/N]" proceed n
 )
 
 if [ "$proceed" != "y" ]; then
