@@ -1760,66 +1760,66 @@ modflag="Setup fwsnort"
 modfile=""
 checkfile=""
 # [B] Header
-echo "---------------------"
-echo "- $modflag"
-echo "---------------------"
+ui_section "$modflag"
 # [C] check if we need to make our change
-echo "... Checking whether to make changes or not..."
+ui_print_note "Checking whether to make changes or not..."
 
 if ls -d /var/lib/fwsnort; then
-  echo "... fwsnort is already installed."
-  echo "... No changes necessary."
+  ui_print_note "fwsnort is already installed."
+  ui_print_note "No changes necessary."
 else
-  echo "... fwsnort is not installed yet."
+  ui_print_note "fwsnort is not installed yet."
   # [D] ask whether to make changes
-  echo "... Install fwsnort? [y/N]"
-  read proceed
-  if [[ $proceed != "y" ]]; then
-    echo "... OK, no changes made."
+  source <(
+    ui_prompt_macro "... Install fwsnort? [y/N]" proceed n
+  )
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, no changes made."
   else
-    mkdir /opt && chcon --type="usr_t"
-    echo "... Which version of fwsnort to grab? [1.6.4]"
-    read proceed
-    if [[ -z $proceed ]]; then
-      fwsnort_version="1.6.4"
-    else
-      fwsnort_version=$proceed
-    fi
-    echo "... Downloading http://cipherdyne.com/fwsnort/download/fwsnort-$fwsnort_version.tar.gz"
-    wget http://cipherdyne.com/fwsnort/download/fwsnort-$fwsnort_version.tar.gz -O /opt/fwsnort-$fwsnort_version.tar.gz | sed 's/.*/[wget says] \0/'
-    cd /opt && tar xzf fwsnort-$fwsnort_version.tar.gz
-    echo "... Installing perl and perl-CPAN ..."
+    ui_start_task "Installing fwsnort..."
+    mkdir /opt && chcon --type="usr_t" /opt
+    source <(
+      "Which version of fwsnort to grab? [1.6.4]" proceed "1.6.4"
+    )
+
+    ui_print_note "Downloading http://cipherdyne.com/fwsnort/download/fwsnort-$fwsnort_version.tar.gz"
+    wget http://cipherdyne.com/fwsnort/download/fwsnort-"$fwsnort_version".tar.gz -O /opt/fwsnort-"$fwsnort_version".tar.gz \
+    | ui_escape_output "wget"
+    cd /opt && tar xzf fwsnort-"$fwsnort_version".tar.gz
+    ui_print_note "Installing perl and perl-CPAN ..."
     yum --assumeyes install gcc perl{,-CPAN} | sed 's/.*/[yum says] \0/'
-    echo "... Setting up dependencies for fwsnort ..."
-    cd /opt/fwsnort-$fwsnort_version/deps \
+    ui_start_task "Setting up dependencies for fwsnort"
+    cd /opt/fwsnort-"$fwsnort_version"/deps \
     && for file in `ls -d | grep -v -e snort_rules -e whois`; do
-      echo "... Installing module $file ..."
+      ui_start_task "Installing module $file"
       (cd $file && perl Makefile.PL && make && make install && cd ..) \
       | sed 's/.*/[installers] \0/'
-      echo "... Done installing module $file ..."
+      ui_end_task "Installing module $file"
     done
+    ui_end_task "Setting up dependencies for fwsnort"
+
     # Finally, install fwsnort itself
-    echo "... Please complete installation process for fwsnort ..."
-    echo "-- press enter when ready --"
-    read proceed
-    /opt/fwsnort-$fwsnort_version/install.pl
-    echo "... Installation completed ..."
-    echo "-- press enter when ready --"
-    read proceed
+    ui_print_note "... Please complete installation process for fwsnort ..."
+    ui_press_any_key
+
+    /opt/fwsnort-"$fwsnort_version"/install.pl
+
+    ui_print_note "Installation completed"
+    ui_press_any_key
+
     # [H] Stat the action
     (( ++ACTIONS_COUNTER ))
+
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
     # [I] Append to undo file
     >> $UNDO_FILE echo "echo '### $modflag ###' "
     >> $UNDO_FILE echo "echo 'Uninstalling fwsnort...' "
     >> $UNDO_FILE echo "rm -rf /etc/fwsnort /var/lib/fwsnort '/opt/fwsnort-$fwsnort_version' "
-    echo "... Wrote undo file."
+    ui_print_note "Wrote undo file."
   fi
 fi
 # [K] ensure they acknowledge the above before proceeding
-echo "-- press enter when ready --"
-read proceed
-# End of Section Template
+ui_press_any_key
 
 # TODO: FINISH
 ####    echo "- Step 4: Customization"
