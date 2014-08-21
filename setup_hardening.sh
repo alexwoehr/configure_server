@@ -1735,9 +1735,9 @@ fi
 ui_end_task "Step 1: Copy sample file"
 
 ui_start_task "Step 2: Add iptables-init script"
-script="configure_server.iptables-init.sh"
+script="iptables-init.sh"
 source <(
-  ui_prompt_macro "Copy and install the iptables-init script?" proceed n
+  ui_prompt_macro "Copy and install the iptables-init script? [y/N]" proceed n
 )
 if [ "$proceed" != "y" ]; then
   ui_print_note "OK, no changes made."
