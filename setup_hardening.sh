@@ -1838,44 +1838,48 @@ ui_press_any_key
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Uncommon Network Protocols"
-echo "------------------------------"
+ui_section "Uncommon Network Protocols"
+
 modfile="/etc/modprobe.d/configure_server.exclusions.modprobe.conf"
 modflag="configure_server directive 2.5.7"
-cat "$modfile" \
-| grep "$modflag$" \
-  > "$SCRATCH"
-if [ ! -s $SCRATCH ]; then 
-  echo "Disable support for uncommon network protocols? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "install dccp /bin/true"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "install sctp /bin/true"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "install rds /bin/true"
-    >> "$modfile" echo "# $modflag"
-    >> "$modfile" echo "install tipc /bin/true"
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
+if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+  ui_print_note "Changes already made. Nothing to do."
+else
+
+  source <(
+    ui_prompt_macro "Disable support for uncommon network protocols? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, no changes made."
+  else
+
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
+    cat <<END_FLAGS >> "$modfile"
+# $modflag
+install dccp /bin/true
+# $modflag
+install sctp /bin/true
+# $modflag
+install rds /bin/true
+# $modflag
+install tipc /bin/true
+END_FLAGS
+
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing uncommon network protocols disablement...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
-  else
-    echo "OK, no changes made."
+    echo "Wrote undo file."
+
   fi
-else
-  echo "Changes already made."
 fi
 
 # NSA 2.6.1.2.4 Confirm existence and Permissions of Log Files
