@@ -2026,41 +2026,42 @@ ui_end_task "Step 2: Verifying all rsyslog files are covered in logrotate"
 #   - basic
 #   - force fix
 #   - undo
-echo
-echo "------------------------------"
-echo "-- Bluetooth"
-echo "------------------------------"
+ui_section "Bluetooth"
+
 modfile="/etc/modprobe.d/configure_server.exclusions.modprobe.conf"
 modflag="configure_server directive 3.3.14.3"
-cat "$modfile" \
-| grep "$modflag$" \
-  > "$SCRATCH"
-if [ ! -s $SCRATCH ]; then 
-  echo "Disable bluetooth modules in kernel? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
+
+if [ 0 '<' `grep "$modflag"$ "$modfile | wc -l` ]; then
+  ui_print_note "OK, nothing to do."
+else
+  source <(
+    ui_prompt_macro "Disable bluetooth modules in kernel? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y"]; then
+    ui_print_note "OK, no action taken."
+  else
     # Save old file
-    modfilebak="$modfile".save-before_setup-`date +%F`
-    if [ ! -e "$modfilebak" ]; then
-      cp $modfile $modfilebak
-    fi
+    source <(
+      fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
+    )
+
     >> $modfile echo "# $modflag"
     >> $modfile echo "alias net-pf-31 off"
     >> $modfile echo "# $modflag"
     >> $modfile echo "alias bluetooth off"
-    # Save new file
-    cp $modfile $modfile.save-after_setup-`date +%F`
+
+    modfile_saveAfter_callback
+
     (( ++ACTIONS_COUNTER ))
-    >> "$ACTIONS_TAKEN_FILE" echo $modflag
+    >> "$ACTIONS_TAKEN_FILE" echo "$modflag"
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing bluetooth kernel disablement...' "
     >> $UNDO_FILE echo "sed --in-place '/$modflag$/,+1d' '$modfile'"
     >> $UNDO_FILE echo "echo 'Changes will take effect after server restart.' "
-  else
-    echo "OK, no changes made."
+    ui_print_note "Wrote undo file."
   fi
-else
-  echo "Changes already made."
 fi
 
 # NSA 3.4.2 Restrict Permissions on Files Used by cron
