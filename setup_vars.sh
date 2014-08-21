@@ -42,7 +42,7 @@ export LIB_DIR="/var/lib/setup_script"
 export DATA_DIR="$LIB_DIR/data"
 
 # SCRIPTS_DIR: all scripts are in here
-export SCRIPTS_DIR="/var/lib/configure_server/scripts"
+export SCRIPTS_DIR="$LIB_DIR/scripts"
 mkdir --parents $SCRIPTS_DIR
 
 # SCRATCH: The main scratch file used to save intermediate output
