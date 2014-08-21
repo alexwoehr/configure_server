@@ -1393,6 +1393,10 @@ else
       local stacking="${2:-requisite}"
       # Comment
       local comment="$3"
+
+      # The Script
+      # Command to comment out existing line
+      echo "${line} s/^/####    /" "$modfile"
       # command to append a line
       echo "${line} a\\"
       if [ -n "$3" ]; then
@@ -1412,6 +1416,8 @@ else
     # Get stacking behavior: required or requisite
     pam_cracklib_stacking=`pam_get_stacking "$pam_file" "$pam_cracklib_line"`
 
+    # First, comment out this line
+    sed --in-place "${pam_cracklib_line} s/^/####    /" "$modfile"
     # Generate and execute sed script
     sed --in-place --file=<( pam_add_cracklib_script "$pam_cracklib_line" "$pam_cracklib_stacking" "$modflag" ) "$modfile"
 
