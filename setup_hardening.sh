@@ -1510,7 +1510,7 @@ fi
 #   - undo
 ui_section "Warning Banners for System Accesses"
 ui_print_note "Two files to check: issue and issue.net"
-if [ -n "`ls /etc/issue{,.net}`" ]; then
+if [ 0 == `ls /etc/issue{,.net} | wc -l` ]; then
   ui_print_note "No banners files found."
   ui_print_note "Nothing to do."
 else
