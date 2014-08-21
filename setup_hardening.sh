@@ -1391,10 +1391,14 @@ else
       local line="$1"
       # Stacking behavior -- required or requisite typically
       local stacking="${2:-requisite}"
+      # Comment
+      local comment="$3"
       # command to append a line
       echo "${line} a\\"
-      # new line: modflag
-      echo "# $modflag\\"
+      if [ -n "$3" ]; then
+        # new line: comment annotation
+        echo "# $comment\\"
+      fi
       # new line: new configuration line
       echo "password	$stacking	pam_cracklib try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1"
     }
@@ -1403,13 +1407,13 @@ else
     pam_file="${modfile##*/}"
 
     # Line number to change
-    pam_wheel_line="$(pam_find_wheel "$pam_file")"
+    pam_cracklib_line="$(pam_find_cracklib "$pam_file")"
 
     # Get stacking behavior: required or requisite
-    pam_wheel_stacking=`pam_get_stacking "$pam_file" "$pam_wheel_line"`
+    pam_cracklib_stacking=`pam_get_stacking "$pam_file" "$pam_cracklib_line"`
 
     # Generate and execute sed script
-    sed --in-place --file=<( pam_add_cracklib_script "$pam_wheel_line" "$pam_wheel_stacking" ) "$modfile"
+    sed --in-place --file=<( pam_add_cracklib_script "$pam_cracklib_line" "$pam_cracklib_stacking" "$modflag" ) "$modfile"
 
     modfile_saveAfter_callback
 
