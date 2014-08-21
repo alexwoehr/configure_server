@@ -1792,7 +1792,7 @@ else
     fi
 
     source <(
-      ui_prompt_macro "Which version of fwsnort to grab? [1.6.4]" proceed "1.6.4"
+      ui_prompt_macro "Which version of fwsnort to grab? [1.6.4]" fwsnort_version "1.6.4"
     )
 
     ui_print_note "Downloading http://cipherdyne.com/fwsnort/download/fwsnort-$fwsnort_version.tar.gz"
