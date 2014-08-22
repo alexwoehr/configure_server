@@ -1797,6 +1797,10 @@ else
     source <(
       ui_prompt_macro "Which version of fwsnort to grab? [1.6.4]" fwsnort_version "1.6.4"
     )
+    # Support idiom "yes | setup_hardening.sh"
+    if [ "$fwsnort_version" == "y" ]; then
+      fwsnort_version="1.6.4"
+    fi
 
     ui_print_note "Downloading http://cipherdyne.com/fwsnort/download/fwsnort-$fwsnort_version.tar.gz"
     wget http://cipherdyne.com/fwsnort/download/fwsnort-"$fwsnort_version".tar.gz -O /opt/fwsnort-"$fwsnort_version".tar.gz \
