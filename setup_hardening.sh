@@ -1247,7 +1247,7 @@ humansgroup=humans
 
 ui_start_task "Step 1. Create humans group"
 
-if [ -n "$(fn_does_group_exist_yn "$humansgroup")" ]; then
+if [ 0 '<' "$(cat $modfile | wc -l)" ]; then
 
   ui_print_note "Found group '$humansgroup'. Nothing to do."
 
@@ -1257,7 +1257,7 @@ else
     ui_prompt_macro  "No humans group ('$humansgroup') was found. Create it? [y/N]" proceed n
   )
 
-  if [ "$proceed" == "y" ]; then
+  if [ "$proceed" != "y" ]; then
 
     ui_print_note "OK, no changes made."
 
