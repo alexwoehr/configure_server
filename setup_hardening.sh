@@ -1247,7 +1247,7 @@ humansgroup=humans
 
 ui_start_task "Step 1. Create humans group"
 
-if [ "" != `fn_does_group_exist_yn "$humansgroup"` ]; then
+if [ -n "$(fn_does_group_exist_yn "$humansgroup")" ]; then
 
   ui_print_note "Found group '$humansgroup'. Nothing to do."
 
