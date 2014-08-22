@@ -38,7 +38,7 @@ fn_get_user_login() {
 fn_does_group_exist_yn() {
   local groupName="$1"
   grep "^$groupName:" /etc/group \
-  | cut --fields=1 --delimiter':'
+  | cut --fields=1 --delimiter=':'
 }
 
 # Lists users (additional users) in a group
