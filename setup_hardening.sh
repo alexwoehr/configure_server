@@ -1399,7 +1399,7 @@ else
 
       # The Script
       # Command to comment out existing line
-      echo "${line} s/^/####    /" "$modfile"
+      echo "${line}s/^/####    /"
       # command to append a line
       echo "${line} a\\"
       if [ -n "$3" ]; then
