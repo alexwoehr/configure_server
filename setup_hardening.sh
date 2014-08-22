@@ -1826,7 +1826,7 @@ else
     ui_print_note "Please complete installation process for fwsnort"
     ui_press_any_key
 
-    ( cd /opt/fwsnort-"$fwsnort_version"/ && install.pl ) \
+    ( cd /opt/fwsnort-"$fwsnort_version"/ && perl ./install.pl ) \
     | ui_escape_output install.pl
 
     ui_print_note "Installation completed"
