@@ -90,7 +90,7 @@ pam_get_stacking() {
   local file="$1"
   local line="$2"
   cat "/etc/pam.d/$file" \
-  | awk "FNR == \"$line\" { print \$2 }"
+  | awk 'FNR == "'$line'" { print $2 }'
 }
 
 # Find line number containing wheel privileges
