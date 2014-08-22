@@ -1247,17 +1247,20 @@ humansgroup=humans
 
 ui_start_task "Step 1. Create humans group"
 
-grep "^$humansgroup:" "$checkfile" \
-  > $SCRATCH
-if [ 0 '<' `cat "$SCRATCH" | wc -l` ]; then
+if [ "" != `fn_does_group_exist_yn "$humansgroup"` ]; then
+
   ui_print_note "Found group '$humansgroup'. Nothing to do."
+
 else
+
   source <(
     ui_prompt_macro  "No humans group ('$humansgroup') was found. Create it? [y/N]" proceed n
   )
 
   if [ "$proceed" == "y" ]; then
+
     ui_print_note "OK, no changes made."
+
   else
 
     # Add group
