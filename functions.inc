@@ -107,7 +107,8 @@ pam_find_cracklib() {
   local file="${1:-system-auth}"
   # Cat the line number for the line we are looking for
   cat "/etc/pam.d/$file" \
-  | awk '$1 == "password" && $3 == "pam_cracklib.so" { print FNR } '
+  | awk '$1 == "password" && $3 == "pam_cracklib.so" { print FNR } ' \
+  | head -1
 }
 
 
