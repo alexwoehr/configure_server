@@ -15,6 +15,33 @@ union() {
 
 # System functions
 # 
+# Get public IP address
+
+public_ip_services="
+169.254.169.254/latest/meta-data/public-ipv4
+ipecho.net/plain
+ip-echo.appspot.com
+"
+
+fn_get_public_ip() {
+  # load best service
+  local public_ip
+  if [ -z "$public_ip" ]; then
+    # Try amazon first
+    public_ip="$(wget --timeout=10 "169.254.169.254/latest/meta-data/public-ipv4")"
+    if [ -z "$public_ip" ]; then
+      # Try another service
+      public_ip="$(wget --timeout=10 wgetip.com)"
+      if [ -z "$public_ip" ]; then
+        # nothing is working.
+        exit 1 # trouble
+      fi
+    fi
+  fi
+
+  echo -n $public_ip
+}
+
 # Check if selinux is enabled
 fn_selinux_enabled() {
   if [ 0 '<' $( getenforce | grep "Disabled" | wc -l) ]; then
