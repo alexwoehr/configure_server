@@ -118,11 +118,14 @@ if [ ! -s "$SCRATCH" ] ; then
   read proceed
   if [ "y" == "$proceed" ] ; then
     echo "Installing..."
+
     ( yum --assumeyes install parted \
       | sed 's/.*/[yum says] \0/') \
     || (echo "Could not install parted." && exit 1)
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing parted...' "
     >> $UNDO_FILE echo "yum --assumeyes remove parted"
@@ -181,7 +184,11 @@ if [ -s "$SCRATCH" ] && which "parted" ; then
     echo "* OK to proceed? [y/N]"
     read proceed
     if [ "y" == "$proceed" ]; then
-      cat "$SCRATCH"1 | parted | sed 's/.*/* [parted says] \0/'
+      # Pass lines slowly into parted. Otherwise it gets backed up and throws a fit.
+      cat "$SCRATCH"1 \
+      | pv --quiet --line-mode --rate-limit 1 \
+      | parted \
+      | sed 's/.*/* [parted says] \0/'
       echo "* OK, commands were executed."
     else
       echo "* OK, no changes made"
