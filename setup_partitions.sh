@@ -51,18 +51,28 @@ echo
 echo "* BEGIN PARTITION ENTRY *"
 echo "* Enter the primary root device? [xvda1]"
 echo -n "> "; read DEVICE_ROOT1
+# Permit using standard "yes |" approach
+if [ "$DEVICE_ROOT1" == "y" ]; then
+  DEVICE_ROOT1="" # use default
+fi
 DEVICE_ROOT1=${DEVICE_ROOT1:-xvda1}
 echo "* OK, you said:"
 echo "*" `echo -n $DEVICE_ROOT1 | cat -A`
 echo "*"
 echo "* Enter the secondary root device? [xvdb]"
 echo -n "> ";read DEVICE_ROOT2
+if [ "$DEVICE_ROOT2" == "y" ]; then
+  DEVICE_ROOT2="" # use default
+fi
 DEVICE_ROOT2=${DEVICE_ROOT2:-xvdb}
 echo "* OK, you said:"
 echo "*" `echo -n $DEVICE_ROOT2 | cat -A`
 echo "*"
 echo "* Enter the primary data device? [xvde]"
 echo -n "> ";read DEVICE_DATA1
+if [ "$DEVICE_DATA1" == "y" ]; then
+  DEVICE_DATA1="" # use default
+fi
 DEVICE_DATA1=${DEVICE_DATA1:-xvde}
 echo "* OK, you said:"
 echo "*" `echo -n $DEVICE_DATA1 | cat -A`
