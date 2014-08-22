@@ -98,7 +98,7 @@ pam_find_wheel() {
   local file="${1:-su}"
   # Print out the line number for the line we are looking for
   cat "/etc/pam.d/$file" \
-  | awk '$1 == "#auth" && $3 == "pam_wheel.so" { print FNR; exit }' \
+  | awk '$1 == "#auth" && $3 == "pam_wheel.so" { print FNR }' \
   | tail -n 1
 }
 
