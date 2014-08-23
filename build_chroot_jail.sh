@@ -11,7 +11,7 @@ source ./setup_vars.sh \
 
 readonly pkg_base_download="http://mirror.centos.org/centos/6/os/x86_64/Packages/centos-release-6-5.el6.centos.11.1.x86_64.rpm"
 
-if [[ -n $1 ]]; then
+if [[ -z $1 ]]; then
   ui_print_note "You must supply the name of the new chroot to create."
   ui_print_note "Exiting.."
   exit 2
