@@ -64,7 +64,8 @@ mkdir  --parents    "$JAIL_DIR"/var/lib/php/session
 chown --recursive   root.root "$JAIL_DIR"/var/run
 chown root.apache   "$JAIL_DIR"/var/lib/php/session
 
-
+# Setup SELinux permissions
+setsebool httpd_disable_trans 1
 
 ui_end_task "Setup remaining inner directories"
 
@@ -72,5 +73,7 @@ ui_end_task "Setup remaining inner directories"
 ui_print_note "Setup is finished."
 ui_print_note "Now you should be able to chroot into the new system and complete any remaining setup by using the following command:"
 
-chroot "$JAIL_DIR" "$(which bash)" --login
+cat <<END_COMMAND
+  chroot "$JAIL_DIR" "$(which bash)" --login
+END_COMMAND
 
