@@ -49,8 +49,8 @@ ui_start_task "Setup remaining inner directories"
 cp "$JAIL_DIR"{/etc/skel/.??*,/root
 
 # Special directories
-mount --bind /proc /var/tmp/chroot/proc
-mount --bind /dev /var/tmp/chroot/dev
+mount --bind /proc "$JAIL_DIR"/proc
+mount --bind /dev "$JAIL_DIR"/dev
 
 # Network DNS resolution
 cp {,"$JAIL_DIR"}/etc/resolv.conf
