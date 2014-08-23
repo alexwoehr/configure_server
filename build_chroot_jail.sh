@@ -48,10 +48,23 @@ ui_start_task "Setup remaining inner directories"
 
 cp "$JAIL_DIR"{/etc/skel/.??*,/root
 
+# Special directories
 mount --bind /proc /var/tmp/chroot/proc
 mount --bind /dev /var/tmp/chroot/dev
 
+# Network DNS resolution
 cp {,"$JAIL_DIR"}/etc/resolv.conf
+
+mkdir  --parents    "$JAIL_DIR"/var/run
+mkdir  --parents    "$JAIL_DIR"/home/httpd
+mkdir  --parents    "$JAIL_DIR"/var/www/html
+mkdir  --parents    "$JAIL_DIR"/tmp
+chmod  1777         "$JAIL_DIR"/tmp
+mkdir  --parents    "$JAIL_DIR"/var/lib/php/session
+chown --recursive   root.root "$JAIL_DIR"/var/run
+chown root.apache   "$JAIL_DIR"/var/lib/php/session
+
+
 
 ui_end_task "Setup remaining inner directories"
 
