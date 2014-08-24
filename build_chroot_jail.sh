@@ -96,8 +96,14 @@ else
   ui_print_note "OK, ca authorities have been copied."
 fi
 
+# Move list of users over
 # passwd is tricky...only copy users that are needed in the chroot
-grep -Fe apache -e varnish -e nginx /etc/passwd > "$JAIL_DIR"/etc/passwd
+grep -Fe root -e apache -e varnish -e nginx /etc/passwd > "$JAIL_DIR"/etc/passwd
+
+# mysql needs this
+if [[ $CHROOT_NAME == "mysql" ]]; then
+  cp {,/chroot/mysql}/etc/sysconfig/network
+fi
 
 # Setup SELinux permissions
 # APACHE only
