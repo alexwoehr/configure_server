@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# TODO:
+# * Add --remove option. It's complicated to remove a chroot, unfortunately.
+
 # Load libraries
 source ./ui.inc
 source ./functions.inc
