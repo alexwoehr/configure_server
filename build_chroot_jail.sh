@@ -44,7 +44,7 @@ yum --installroot="$JAIL_DIR" install --assumeyes rpm-build yum \
 
 # Copy over the repos
 source <(
-  "Copy your current repos into the chroot?" proceed n
+  ui_prompt_macro "Copy your current repos into the chroot?" proceed n
 )
 if [[ $proceed != "y" ]]; then
   ui_print_note "OK, no action taken."
@@ -82,7 +82,7 @@ cp -fv /etc/{prelink.cache,services,adjtime,shells,hosts.deny,localtime,nsswitch
 
 # square up CA's in new system
 source <(
-  "Copy your TLS items including CA authorities into chroot?" proceed n
+  ui_prompt_macro "Copy your TLS items including CA authorities into chroot?" proceed n
 )
 if [[ $proceed != "y" ]]; then
   ui_print_note "OK, no action taken."
