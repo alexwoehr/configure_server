@@ -79,6 +79,19 @@ chown root.apache   "$JAIL_DIR"/var/lib/php/session
 # From link: http://www.cyberciti.biz/faq/howto-run-nginx-in-a-chroot-jail/
 # cp -fv /etc/{group,prelink.cache,services,adjtime,shells,gshadow,shadow,hosts.deny,localtime,nsswitch.conf,nscd.conf,prelink.conf,protocols,hosts,passwd,ld.so.cache,ld.so.conf,resolv.conf,host.conf} "$JAIL_DIR"/etc
 cp -fv /etc/{prelink.cache,services,adjtime,shells,hosts.deny,localtime,nsswitch.conf,nscd.conf,prelink.conf,protocols,hosts,ld.so.cache,ld.so.conf,resolv.conf,host.conf} "$JAIL_DIR"/etc
+
+# square up CA's in new system
+source <(
+  "Copy your TLS items including CA authorities into chroot?" proceed n
+)
+if [[ $proceed != "y" ]]; then
+  ui_print_note "OK, no action taken."
+else
+  mkdir --parents "$JAIL_DIR"/etc/pki/tls/certs
+  cp -rfv /etc/pki/tls/certs "$JAIL_DIR"/etc/pki/tls
+  ui_print_note "OK, ca authorities have been copied."
+fi
+
 # passwd is tricky...only copy users that are needed in the chroot
 grep -Fe apache -e varnish -e nginx /etc/passwd > "$JAIL_DIR"/etc/passwd
 
