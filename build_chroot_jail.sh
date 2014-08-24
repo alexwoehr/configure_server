@@ -75,7 +75,15 @@ mkdir  --parents    "$JAIL_DIR"/var/lib/php/session
 chown --recursive   root.root "$JAIL_DIR"/var/run
 chown root.apache   "$JAIL_DIR"/var/lib/php/session
 
+# Copy important etc configuration
+# From link: http://www.cyberciti.biz/faq/howto-run-nginx-in-a-chroot-jail/
+# cp -fv /etc/{group,prelink.cache,services,adjtime,shells,gshadow,shadow,hosts.deny,localtime,nsswitch.conf,nscd.conf,prelink.conf,protocols,hosts,passwd,ld.so.cache,ld.so.conf,resolv.conf,host.conf} "$JAIL_DIR"/etc
+cp -fv /etc/{prelink.cache,services,adjtime,shells,hosts.deny,localtime,nsswitch.conf,nscd.conf,prelink.conf,protocols,hosts,ld.so.cache,ld.so.conf,resolv.conf,host.conf} "$JAIL_DIR"/etc
+# passwd is tricky...only copy users that are needed in the chroot
+grep -Fe apache -e varnish -e nginx /etc/passwd > "$JAIL_DIR"/etc/passwd
+
 # Setup SELinux permissions
+# APACHE only
 setsebool httpd_disable_trans 1
 
 ui_end_task "Setup remaining inner directories"
