@@ -19,7 +19,8 @@ if [[ -z $1 ]]; then
   ui_print_note "Exiting.."
   exit 2
 fi
-readonly JAIL_DIR=/chroot/"$1"
+readonly CHROOT_NAME="$1"
+readonly JAIL_DIR=/chroot/"$CHROOT_NAME"
 
 ui_start_task "Create chroot jail directory"
 
