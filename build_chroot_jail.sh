@@ -42,6 +42,17 @@ ui_start_task "Install all core packages"
 yum --installroot="$JAIL_DIR" install --assumeyes rpm-build yum \
   | ui_escape_output "yum"
 
+# Copy over the repos
+source <(
+  "Copy your current repos into the chroot?" proceed n
+)
+if [[ $proceed != "y" ]]; then
+  ui_print_note "OK, no action taken."
+else
+  cp -rf /etc/yum.repos.d/ "$JAIL_DIR"/etc
+  ui_print_note "Copied repos."
+fi
+
 ui_end_task "Install all core packages"
 
 ui_start_task "Setup remaining inner directories"
