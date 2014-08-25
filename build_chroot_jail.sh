@@ -2,6 +2,14 @@
 
 # TODO:
 # * Add --remove option. It's complicated to remove a chroot, unfortunately.
+# * Compare against script at http://www.linuxfocus.org/common/src/article225/Config_Chroot.pl.txt (see http://www.linuxfocus.org/English/January2002/article225.shtml)
+# * Research SELinux and chroot, SELinux and loop
+
+# TODO: Setup section.
+####    # Use DD and PV so you can keep tabs on progress
+####    mount -o loop,"$OTHER_OPTIONS" /chroot/Loops/"$CHROOT_NAME".loop "$CHROOT_DIR"
+####    # Verify that it worked
+####    mount | grep "$CHROOT_DIR"
 
 # Load libraries
 source ./ui.inc
@@ -19,11 +27,42 @@ if [[ -z $1 ]]; then
   ui_print_note "Exiting.."
   exit 2
 fi
+
 readonly CHROOT_NAME="$1"
 readonly JAIL_DIR=/chroot/"$CHROOT_NAME"
+readonly CHROOT_LOOP_FILE=/chroot/Loops/"$CHROOT_NAME".loop
+
+ui_start_task "Create chroot loop partition"
+
+if [[ ! -e "$CHROOT_LOOP_FILE" ]]; then
+  ui_print_note "Partition not detected yet."
+  ui_print_note "Building the partition..."
+
+  # Use DD and PV so you can keep tabs on progress
+  if [[ -z $CHROOT_SIZE_MEGABYTES ]]; then
+    source <(
+      ui_prompt_macro "How many MB should the new chroot be? [8000]" CHROOT_SIZE_MEGABYTES 8000
+    )
+  fi
+
+  # TODO: Could determine ideal BS size using tool
+  dd bs=1M count="$CHROOT_SIZE_MEGABYTES" if=/dev/zero | pv -s "$CHROOT_SIZE_MEGABYTES" > "$CHROOT_LOOP_FILE"
+  # Create filesystem in the file
+  mkfs.ext4 -F "$CHROOT_LOOP_FILE"
+  # task: determine options for this chroot (this is the WHOLE POINT of using a loop)
+  source <(
+    ui_prompt_macro "What mount options? [defaults,nodev,nosuid,nosgid]" CHROOT_MOUNT_OPTIONS "defaults,nodev,nosuid,nosgid"
+  )
+  mount -o "loop,$OTHER_OPTIONS" /chroot/Loops/"$CHROOT_NAME".loop "$CHROOT_DIR"
+  exit 255
+
+fi
+
+ui_end_task "Create chroot loop partition"
 
 ui_start_task "Create chroot jail directory"
 
+mkdir --parents "$JAIL_DIR"
 mkdir --parents "$JAIL_DIR"/var/lib/rpm
 
 ui_end_task "Create chroot jail directory"
