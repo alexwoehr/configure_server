@@ -34,7 +34,10 @@ readonly CHROOT_JAIL_DIR=/chroot/"$CHROOT_NAME"
 readonly CHROOT_LOOP_FILE=/chroot/Loops/"$CHROOT_NAME".loop
 
 # User that owns the chroot
-readonly CHROOT_USER=CHROOT_"$CHROOT_NAME"
+readonly CHROOT_USER=chroot_"$CHROOT_NAME"
+
+# User that owns the chroot
+readonly CHROOT_GROUP=chroot_group
 
 ui_start_task "Create chroot loop partition"
 
@@ -168,7 +171,15 @@ chown --recursive   root:root "$CHROOT_JAIL_DIR"/var/run
 # chown root:apache   "$CHROOT_JAIL_DIR"/var/lib/php/session
 
 # Setup user on CHROOT jail
-useradd --home "$CHROOT_JAIL" $CHROOT_USER
+if getent group $CHROOT_GROUP; then
+  ui_print_note "Found group $CHROOT_GROUP"
+else
+  ui_print_note "Creating group $CHROOT_GROUP"
+  groupadd "$CHROOT_GROUP"
+fi
+
+useradd --home "$CHROOT_JAIL" "$CHROOT_USER"
+gpasswd --add "$CHROOT_USER" "$CHROOT_GROUP"
 chown $CHROOT_USER:$CHROOT_USER "$CHROOT_JAIL_DIR"
 
 # We only give permissions to home and root. In individual chroot scripts, you may want to do more.
