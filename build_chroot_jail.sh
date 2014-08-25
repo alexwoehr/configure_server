@@ -132,7 +132,7 @@ yum --installroot="$JAIL_DIR" install --assumeyes rpm-build yum \
 
 # Copy over the repos
 source <(
-  ui_prompt_macro "Copy your current repos into the chroot?" proceed n
+  ui_prompt_macro "Copy your current repos into the chroot? [y/N]" proceed n
 )
 if [[ $proceed != "y" ]]; then
   ui_print_note "OK, no action taken."
@@ -145,7 +145,7 @@ ui_end_task "Install all core packages"
 
 ui_start_task "Setup remaining inner directories"
 
-cp "$JAIL_DIR"{/etc/skel/.??*,/root
+cp "$JAIL_DIR"{/etc/skel/.??*,/root}
 
 # Special directories
 mount --bind /proc "$JAIL_DIR"/proc
@@ -170,7 +170,7 @@ cp -fv /etc/{prelink.cache,services,adjtime,shells,hosts.deny,localtime,nsswitch
 
 # square up CA's in new system
 source <(
-  ui_prompt_macro "Copy your TLS items including CA authorities into chroot?" proceed n
+  ui_prompt_macro "Copy your CA authorities into chroot? [y/N]" proceed n
 )
 if [[ $proceed != "y" ]]; then
   ui_print_note "OK, no action taken."
@@ -191,7 +191,8 @@ fi
 
 # Setup SELinux permissions
 # APACHE only
-setsebool httpd_disable_trans 1
+ui_print_note "Setting up selinux permissions."
+# setsebool httpd_disable_trans 1
 
 ui_end_task "Setup remaining inner directories"
 
