@@ -24,9 +24,17 @@ if [[ -z $1 ]]; then
   exit 2
 fi
 
+# Name of the chroot itself. This will determine many other settings.
 readonly CHROOT_NAME="$1"
+
+# Location of the jail
 readonly CHROOT_JAIL_DIR=/chroot/"$CHROOT_NAME"
+
+# Loop file that contains the chroot filesystem
 readonly CHROOT_LOOP_FILE=/chroot/Loops/"$CHROOT_NAME".loop
+
+# User that owns the chroot
+readonly CHROOT_USER=CHROOT_"$CHROOT_NAME"
 
 ui_start_task "Create chroot loop partition"
 
@@ -179,24 +187,26 @@ source <(
 if [[ $proceed != "y" ]]; then
   ui_print_note "OK, no action taken."
 else
-  mkdir --parents "$JAIL_DIR"/etc/pki/tls/certs
-  cp -rfv /etc/pki/tls/certs "$JAIL_DIR"/etc/pki/tls
+  mkdir --parents "$CHROOT_JAIL_DIR"/etc/pki/tls/certs
+  cp -rfv /etc/pki/tls/certs "$CHROOT_JAIL_DIR"/etc/pki/tls
   ui_print_note "OK, ca authorities have been copied."
 fi
 
 # Move list of users over
 # passwd is tricky...only copy users that are needed in the chroot
-grep -Fe root -e apache -e varnish -e nginx /etc/passwd > "$JAIL_DIR"/etc/passwd
+grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/passwd >> "$CHROOT_JAIL_DIR"/etc/passwd
+grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/shadow >> "$CHROOT_JAIL_DIR"/etc/shadow
+grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/group  >> "$CHROOT_JAIL_DIR"/etc/shadow
 
-# mysql needs this
-if [[ $CHROOT_NAME == "mysql" ]]; then
-  cp {,/chroot/mysql}/etc/sysconfig/network
-fi
+####    # mysql needs this
+####    if [[ $CHROOT_NAME == "mysql" ]]; then
+####    cp {,/chroot/mysql}/etc/sysconfig/network
+####    fi
 
 # Setup SELinux permissions
 # APACHE only
 ui_print_note "Setting up selinux permissions."
-# setsebool httpd_disable_trans 1
+####    apache: # setsebool httpd_disable_trans 1
 
 ui_end_task "Setup remaining inner directories"
 
