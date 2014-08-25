@@ -25,7 +25,7 @@ if [[ -z $1 ]]; then
 fi
 
 readonly CHROOT_NAME="$1"
-readonly JAIL_DIR=/chroot/"$CHROOT_NAME"
+readonly CHROOT_JAIL_DIR=/chroot/"$CHROOT_NAME"
 readonly CHROOT_LOOP_FILE=/chroot/Loops/"$CHROOT_NAME".loop
 
 ui_start_task "Create chroot loop partition"
@@ -61,7 +61,7 @@ ui_end_task "Create chroot loop partition"
 ui_start_task "Mount chroot"
 
 # Mount the loop file
-if [[ $(mount | grep --fixed-strings "$JAIL_DIR" | wc -l) == 0 ]]; then
+if [[ $(mount | grep --fixed-strings "$CHROOT_JAIL_DIR" | wc -l) == 0 ]]; then
   ui_print_note "Mount point was detected. Not safe to mess with existing sytem."
 else
  
@@ -76,7 +76,7 @@ else
     CHROOT_MOUNT_OPTIONS="defaults,nodev,nosuid"
   fi
 
-  mount -o "loop,$CHROOT_MOUNT_OPTIONS" /chroot/Loops/"$CHROOT_NAME".loop "$JAIL_DIR"
+  mount -o "loop,$CHROOT_MOUNT_OPTIONS" /chroot/Loops/"$CHROOT_NAME".loop "$CHROOT_JAIL_DIR"
 
   # TODO: Test here whether it's already in fstab. (Previous unclean removal of the chroot jail.)
   source <(
@@ -89,7 +89,7 @@ else
 
     # Add to fstab entry
     >> /etc/fstab cat <<END_FSTAB_ENTRY
-/chroot/Loops/"$CHROOT_NAME".loop       "$JAIL_DIR"           ext4            "loop,$OTHER_OPTIONS"   1 2
+/chroot/Loops/"$CHROOT_NAME".loop       "$CHROOT_JAIL_DIR"           ext4            "loop,$CHROOT_MOUNT_OPTIONS"   1 2
 END_FSTAB_ENTRY
 
     ui_print_note "Added entry to fstab."
@@ -103,14 +103,14 @@ ui_end_task "Create chroot file system"
 
 ui_start_task "Create chroot jail directory"
 
-mkdir --parents "$JAIL_DIR"
-mkdir --parents "$JAIL_DIR"/var/lib/rpm
+mkdir --parents "$CHROOT_JAIL_DIR"
+mkdir --parents "$CHROOT_JAIL_DIR"/var/lib/rpm
 
 ui_end_task "Create chroot jail directory"
 
 ui_start_task "Setup rpm base"
 
-rpm --rebuilddb --root="$JAIL_DIR"
+rpm --rebuilddb --root="$CHROOT_JAIL_DIR"
 
 # Subshell
 (
@@ -123,7 +123,7 @@ ui_end_task "Setup rpm base"
 
 ui_start_task "Install all core packages"
 
-yum --installroot="$JAIL_DIR" install --assumeyes rpm-build yum \
+yum --installroot="$CHROOT_JAIL_DIR" install --assumeyes rpm-build yum \
   | ui_escape_output "yum"
 
 # Copy over the repos
@@ -133,7 +133,7 @@ source <(
 if [[ $proceed != "y" ]]; then
   ui_print_note "OK, no action taken."
 else
-  cp -rf /etc/yum.repos.d/ "$JAIL_DIR"/etc
+  cp -rf /etc/yum.repos.d/ "$CHROOT_JAIL_DIR"/etc
   ui_print_note "Copied repos."
 fi
 
@@ -141,28 +141,36 @@ ui_end_task "Install all core packages"
 
 ui_start_task "Setup remaining inner directories"
 
-cp "$JAIL_DIR"{/etc/skel/.??*,/root}
+cp "$CHROOT_JAIL_DIR"{/etc/skel/.??*,/root}
 
 # Special directories
-mount --bind /proc "$JAIL_DIR"/proc
-mount --bind /dev "$JAIL_DIR"/dev
+mount --bind /proc "$CHROOT_JAIL_DIR"/proc
+mount --bind /dev "$CHROOT_JAIL_DIR"/dev
 
 # Network DNS resolution
-cp {,"$JAIL_DIR"}/etc/resolv.conf
+cp {,"$CHROOT_JAIL_DIR"}/etc/resolv.conf
 
-mkdir  --parents    "$JAIL_DIR"/var/run
-mkdir  --parents    "$JAIL_DIR"/home/httpd
-mkdir  --parents    "$JAIL_DIR"/var/www/html
-mkdir  --parents    "$JAIL_DIR"/tmp
-chmod  1777         "$JAIL_DIR"/tmp
-mkdir  --parents    "$JAIL_DIR"/var/lib/php/session
-chown --recursive   root.root "$JAIL_DIR"/var/run
-chown root.apache   "$JAIL_DIR"/var/lib/php/session
+mkdir  --parents    "$CHROOT_JAIL_DIR"/var/run
+mkdir  --parents    "$CHROOT_JAIL_DIR"/home/httpd
+mkdir  --parents    "$CHROOT_JAIL_DIR"/var/www/html
+mkdir  --parents    "$CHROOT_JAIL_DIR"/tmp
+chmod  1777         "$CHROOT_JAIL_DIR"/tmp
+chown --recursive   root:root "$CHROOT_JAIL_DIR"/var/run
+# mkdir  --parents    "$CHROOT_JAIL_DIR"/var/lib/php/session
+# chown root:apache   "$CHROOT_JAIL_DIR"/var/lib/php/session
+
+# Setup user on CHROOT jail
+useradd --home "$CHROOT_JAIL" $CHROOT_USER
+chown $CHROOT_USER:$CHROOT_USER "$CHROOT_JAIL_DIR"
+
+# We only give permissions to home and root. In individual chroot scripts, you may want to do more.
+for dir in home root; do
+  chown -R $CHROOT_USER:$CHROOT_USER "$CHROOT_JAIL_DIR"/$dir
+done
 
 # Copy important etc configuration
 # From link: http://www.cyberciti.biz/faq/howto-run-nginx-in-a-chroot-jail/
-# cp -fv /etc/{group,prelink.cache,services,adjtime,shells,gshadow,shadow,hosts.deny,localtime,nsswitch.conf,nscd.conf,prelink.conf,protocols,hosts,passwd,ld.so.cache,ld.so.conf,resolv.conf,host.conf} "$JAIL_DIR"/etc
-cp -fv /etc/{prelink.cache,services,adjtime,shells,hosts.deny,localtime,nsswitch.conf,nscd.conf,prelink.conf,protocols,hosts,ld.so.cache,ld.so.conf,resolv.conf,host.conf} "$JAIL_DIR"/etc
+cp -fv /etc/{prelink.cache,services,adjtime,shells,hosts.deny,localtime,nsswitch.conf,nscd.conf,prelink.conf,protocols,hosts,ld.so.cache,ld.so.conf,resolv.conf,host.conf} "$CHROOT_JAIL_DIR"/etc
 
 # square up CA's in new system
 source <(
@@ -197,6 +205,6 @@ ui_print_note "Setup is finished."
 ui_print_note "Now you should be able to chroot into the new system and complete any remaining setup by using the following command:"
 
 cat <<END_COMMAND
-  chroot "$JAIL_DIR" "$(which bash)" --login
+  cd "$CHROOT_JAIL_DIR" && chroot "$CHROOT_JAIL_DIR" su "$CHROOT_USER" "$(which bash)" --login
 END_COMMAND
 
