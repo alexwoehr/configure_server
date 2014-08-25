@@ -19,7 +19,8 @@ readonly USER=varnish
 readonly CHROOT_USER=chroot_varnish
 
 # Build varnish jail with default parameters
-yes | build_chroot_jail.sh "$CHROOT_NAME"
+cd "$LIB_DIR"
+yes | ./build_chroot_jail.sh "$CHROOT_NAME"
 
 # install packages for varnish
 rpm --nosignature -i https://repo.varnish-cache.org/redhat/varnish-4.0.el6.rpm
