@@ -7,9 +7,9 @@
 
 # TODO: Setup section.
 ####    # Use DD and PV so you can keep tabs on progress
-####    mount -o loop,"$OTHER_OPTIONS" /chroot/Loops/"$CHROOT_NAME".loop "$CHROOT_DIR"
+####    mount -o loop,"$OTHER_OPTIONS" /chroot/Loops/"$CHROOT_NAME".loop "$JAIL_DIR"
 ####    # Verify that it worked
-####    mount | grep "$CHROOT_DIR"
+####    mount | grep "$JAIL_DIR"
 
 # Load libraries
 source ./ui.inc
@@ -34,7 +34,10 @@ readonly CHROOT_LOOP_FILE=/chroot/Loops/"$CHROOT_NAME".loop
 
 ui_start_task "Create chroot loop partition"
 
-if [[ ! -e "$CHROOT_LOOP_FILE" ]]; then
+if [[ -e "$CHROOT_LOOP_FILE" ]]; then
+  ui_print_note "Partition was detected. Nothing to do."
+else
+
   ui_print_note "Partition not detected yet."
   ui_print_note "Building the partition..."
 
@@ -43,22 +46,64 @@ if [[ ! -e "$CHROOT_LOOP_FILE" ]]; then
     source <(
       ui_prompt_macro "How many MB should the new chroot be? [8000]" CHROOT_SIZE_MEGABYTES 8000
     )
+
+    # Ensure that "yes | $0" idiom works: y is always a normal answer.
+    if [[ $CHROOT_SIZE_MEGABYTES == "y" ]]; then
+      CHROOT_SIZE_MEGABYTES="8000"
+    fi
   fi
 
   # TODO: Could determine ideal BS size using tool
-  dd bs=1M count="$CHROOT_SIZE_MEGABYTES" if=/dev/zero | pv -s "$CHROOT_SIZE_MEGABYTES" > "$CHROOT_LOOP_FILE"
-  # Create filesystem in the file
-  mkfs.ext4 -F "$CHROOT_LOOP_FILE"
-  # task: determine options for this chroot (this is the WHOLE POINT of using a loop)
-  source <(
-    ui_prompt_macro "What mount options? [defaults,nodev,nosuid,nosgid]" CHROOT_MOUNT_OPTIONS "defaults,nodev,nosuid,nosgid"
-  )
-  mount -o "loop,$OTHER_OPTIONS" /chroot/Loops/"$CHROOT_NAME".loop "$CHROOT_DIR"
-  exit 255
+  dd bs=1M count="$CHROOT_SIZE_MEGABYTES" if=/dev/zero | pv -s "$CHROOT_SIZE_MEGABYTES"M > "$CHROOT_LOOP_FILE"
 
+  # Create filesystem in the loop file
+  mkfs.ext4 -F "$CHROOT_LOOP_FILE"
 fi
 
 ui_end_task "Create chroot loop partition"
+
+ui_start_task "Mount chroot"
+
+# Mount the loop file
+if [[ $(mount | grep --fixed-strings "$JAIL_DIR" | wc -l) == 0 ]]; then
+  ui_print_note "Mount point was detected. Not safe to mess with existing sytem."
+else
+ 
+  # It's not mounted yet.
+  # Need to mount it.
+  source <(
+    ui_prompt_macro "What mount options to use? [defaults,nodev,nosuid]" CHROOT_MOUNT_OPTIONS "defaults,nodev,nosuid"
+  )
+
+  # Ensure that "yes | $0" idiom works: y is always a normal answer.
+  if [[ $proceed == "y" ]]; then
+    CHROOT_MOUNT_OPTIONS="defaults,nodev,nosuid"
+  fi
+
+  mount -o "loop,$CHROOT_MOUNT_OPTIONS" /chroot/Loops/"$CHROOT_NAME".loop "$JAIL_DIR"
+
+  # TODO: Test here whether it's already in fstab. (Previous unclean removal of the chroot jail.)
+  source <(
+    ui_prompt_macro "Should we add to fstab? [y/N]" proceed n
+  )
+
+  if [[ $proceed != "y" ]]; then
+    ui_print_note "OK, did not add loop device to fstab"
+  else
+
+    # Add to fstab entry
+    >> /etc/fstab cat <<END_FSTAB_ENTRY
+/chroot/Loops/"$CHROOT_NAME".loop       "$JAIL_DIR"           ext4            "loop,$OTHER_OPTIONS"   1 2
+END_FSTAB_ENTRY
+
+    ui_print_note "Added entry to fstab."
+    cat /etc/fstab | ui_escape_output "fstab"
+    ui_press_any_key
+  fi
+fi
+
+
+ui_end_task "Create chroot file system"
 
 ui_start_task "Create chroot jail directory"
 
