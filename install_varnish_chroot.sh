@@ -16,17 +16,19 @@ readonly CHROOT_JAIL_DIR=/chroot/"$CHROOT_NAME"
 readonly CHROOT_LOOP_FILE=/chroot/Loops/"$CHROOT_NAME".loop
 
 readonly USER=varnish
-readonly CHROOT_USER=chroot_varnish
+readonly CHROOT_USER=chroot_"$USER"
 
 # Build varnish jail with default parameters
 cd "$LIB_DIR"
 yes | ./build_chroot_jail.sh "$CHROOT_NAME"
 
 # install packages for varnish
-rpm --nosignature -i https://repo.varnish-cache.org/redhat/varnish-4.0.el6.rpm
+chroot "$CHROOT_JAIL" <<END_COMMANDS
+  rpm --nosignature -i https://repo.varnish-cache.org/redhat/varnish-4.0.el6.rpm
 
-yum --assumeyes install varnish \
-| ui_escape_output "yum"
+  yum --assumeyes install varnish \
+  | ui_escape_output "yum"
+END_COMMANDS
 
 # Copy over sample conf files
 if [[ -e "$LIB_DIR"/samples/"$CHROOT_NAME".defaults ]]; then
