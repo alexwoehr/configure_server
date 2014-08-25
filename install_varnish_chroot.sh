@@ -18,7 +18,7 @@ readonly CHROOT_LOOP_FILE=/chroot/Loops/"$CHROOT_NAME".loop
 readonly USER=varnish
 readonly CHROOT_USER=chroot_varnish
 
-# Build default chroot jail
+# Build varnish jail with default parameters
 yes | build_chroot_jail.sh "$CHROOT_NAME"
 
 # install packages for varnish
