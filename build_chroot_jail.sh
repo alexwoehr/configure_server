@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 
 # TODO:
+# * IMPORTANT: does not yet add /dev and /proc mounts to the chroot dir
 # * Add --remove option. It's complicated to remove a chroot, unfortunately.
 # * Compare against script at http://www.linuxfocus.org/common/src/article225/Config_Chroot.pl.txt (see http://www.linuxfocus.org/English/January2002/article225.shtml)
 # * Research SELinux and chroot, SELinux and loop
-
-# TODO: Setup section.
-####    # Use DD and PV so you can keep tabs on progress
-####    mount -o loop,"$OTHER_OPTIONS" /chroot/Loops/"$CHROOT_NAME".loop "$JAIL_DIR"
-####    # Verify that it worked
-####    mount | grep "$JAIL_DIR"
+# * Ensure no chroot jail
 
 # Load libraries
 source ./ui.inc
