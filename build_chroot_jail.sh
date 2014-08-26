@@ -62,9 +62,6 @@ else
 
   # TODO: Could determine ideal BS size using tool
   dd bs=1M count="$CHROOT_SIZE_MEGABYTES" if=/dev/zero | pv -s "$CHROOT_SIZE_MEGABYTES"M > "$CHROOT_LOOP_FILE"
-
-  # Create filesystem in the loop file
-  mkfs.ext4 -F "$CHROOT_LOOP_FILE"
 fi
 
 ui_end_task "Create chroot loop partition"
@@ -75,12 +72,15 @@ mkdir --parents "$CHROOT_JAIL_DIR"
 
 ui_end_task "Create chroot jail directory"
 
-ui_start_task "Mount chroot"
+ui_start_task "Create chroot file system"
 
 # Mount the loop file
 if [[ $(mount | grep --fixed-strings "$CHROOT_JAIL_DIR" | wc -l) != 0 ]]; then
   ui_print_note "Mount point was detected. Not safe to mess with existing sytem."
 else
+
+  # Create filesystem in the loop file
+  mkfs.ext4 -F "$CHROOT_LOOP_FILE"
  
   # It's not mounted yet.
   # Need to mount it.
