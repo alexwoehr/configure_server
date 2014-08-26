@@ -100,7 +100,7 @@ else
 
     # Add to fstab entry
     >> /etc/fstab cat <<END_FSTAB_ENTRY
-/chroot/Loops/"$CHROOT_NAME".loop       "$CHROOT_JAIL_DIR"           ext4            "loop,$CHROOT_MOUNT_OPTIONS"   1 2
+/chroot/Loops/$CHROOT_NAME.loop       $CHROOT_JAIL_DIR           ext4            loop,$CHROOT_MOUNT_OPTIONS   1 2
 END_FSTAB_ENTRY
 
     ui_print_note "Added entry to fstab."
