@@ -83,7 +83,7 @@ else
   )
 
   # Ensure that "yes | $0" idiom works: y is always a normal answer.
-  if [[ $proceed == "y" ]]; then
+  if [[ $CHROOT_MOUNT_OPTIONS == "y" ]]; then
     CHROOT_MOUNT_OPTIONS="defaults,nodev,nosuid"
   fi
 
