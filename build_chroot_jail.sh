@@ -69,6 +69,12 @@ fi
 
 ui_end_task "Create chroot loop partition"
 
+ui_start_task "Create chroot jail directory"
+
+mkdir --parents "$CHROOT_JAIL_DIR"
+
+ui_end_task "Create chroot jail directory"
+
 ui_start_task "Mount chroot"
 
 # Mount the loop file
@@ -112,14 +118,9 @@ fi
 
 ui_end_task "Create chroot file system"
 
-ui_start_task "Create chroot jail directory"
-
-mkdir --parents "$CHROOT_JAIL_DIR"
-mkdir --parents "$CHROOT_JAIL_DIR"/var/lib/rpm
-
-ui_end_task "Create chroot jail directory"
-
 ui_start_task "Setup rpm base"
+
+mkdir --parents "$CHROOT_JAIL_DIR"/var/lib/rpm
 
 rpm --rebuilddb --root="$CHROOT_JAIL_DIR"
 
