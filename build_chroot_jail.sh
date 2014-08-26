@@ -179,7 +179,8 @@ else
   groupadd "$CHROOT_GROUP"
 fi
 
-useradd --home "$CHROOT_JAIL" "$CHROOT_USER"
+useradd --home "$CHROOT_JAIL_DIR" "$CHROOT_USER"
+exit 255
 gpasswd --add "$CHROOT_USER" "$CHROOT_GROUP"
 chown $CHROOT_USER:$CHROOT_USER "$CHROOT_JAIL_DIR"
 
