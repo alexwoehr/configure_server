@@ -72,7 +72,7 @@ ui_end_task "Create chroot loop partition"
 ui_start_task "Mount chroot"
 
 # Mount the loop file
-if [[ $(mount | grep --fixed-strings "$CHROOT_JAIL_DIR" | wc -l) == 0 ]]; then
+if [[ $(mount | grep --fixed-strings "$CHROOT_JAIL_DIR" | wc -l) != 0 ]]; then
   ui_print_note "Mount point was detected. Not safe to mess with existing sytem."
 else
  
