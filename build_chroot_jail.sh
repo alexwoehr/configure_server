@@ -179,8 +179,8 @@ else
   groupadd "$CHROOT_GROUP"
 fi
 
-useradd --home "$CHROOT_JAIL_DIR" "$CHROOT_USER"
-exit 255
+# -M: means "do not create home directory"
+useradd -M --home "$CHROOT_JAIL_DIR" "$CHROOT_USER"
 gpasswd --add "$CHROOT_USER" "$CHROOT_GROUP"
 chown $CHROOT_USER:$CHROOT_USER "$CHROOT_JAIL_DIR"
 
