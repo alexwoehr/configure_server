@@ -39,6 +39,9 @@ readonly CHROOT_USER=chroot_"$CHROOT_NAME"
 # User that owns the chroot
 readonly CHROOT_GROUP=chroot_group
 
+# Packages to install
+readonly PACKAGES="rpm-build yum initscripts"
+
 ui_start_task "Create chroot loop partition"
 
 if [[ -e "$CHROOT_LOOP_FILE" ]]; then
@@ -135,7 +138,8 @@ ui_end_task "Setup rpm base"
 
 ui_start_task "Install all core packages"
 
-yum --installroot="$CHROOT_JAIL_DIR" install --assumeyes rpm-build yum \
+# unquoted variable expands to multiple words
+yum --installroot="$CHROOT_JAIL_DIR" install --assumeyes $PACKAGES \
   | ui_escape_output "yum"
 
 # Copy over the repos
