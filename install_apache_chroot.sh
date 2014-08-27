@@ -83,29 +83,37 @@ cd "$CHROOT_JAIL_DIR"
 
 # Change pid and lock file in init script to use different file
 #
-cat >> etc/sysconfig/httpd <<END
-  PIDFILE=/var/run/httpd-container/httpd.pid # line added by install_apache_chroot.sh
-  LOCKFILE=/var/lock/subsys/httpd-container/httpd # line added by install_apache_chroot.sh
-END
+if [[ 0 == $(grep "^PIDFILE" etc/sysconfig/httpd | wc -l) ]]; then
+        cat >> etc/sysconfig/httpd <<-END
+                PIDFILE=/var/run/apache-container/httpd.pid # line added by install_apache_chroot.sh
+                LOCKFILE=/var/lock/subsys/apache-container/httpd # line added by install_apache_chroot.sh
+        END
+fi
 
 # Fix configuration: listen on 8000 instead of 80
 #
 search_value='Listen 80'
 new_value='Listen 8080'
 change_line=$(grep --line-number --fixed-strings --line-regexp -e "$search_value" etc/httpd/conf/httpd.conf | cut -d: -f1 | head -1 )
-sed --in-place "${change_line}c\\\n$new_value" /etc/httpd/conf/httpd.conf
+if [[ -n $change_line ]]; then
+  sed --in-place "${change_line}c\\\n$new_value" /etc/httpd/conf/httpd.conf
+fi
 
 # Fix configuration: Document Root to /srv
 #
 search_value='DocumentRoot "/var/www/html"'
 new_value='DocumentRoot "/srv"'
 change_line=$(grep --line-number --fixed-strings --line-regexp -e "$search_value" etc/httpd/conf/httpd.conf | cut -d: -f1 | head -1 )
-sed --in-place "${change_line}c\\\n$new_value" /etc/httpd/conf/httpd.conf
+if [[ -n $change_line ]]; then
+  sed --in-place "${change_line}c\\\n$new_value" /etc/httpd/conf/httpd.conf
+fi
 
 search_value='<Directory "/var/www/html">'
 new_value='<Directory "/srv">'
 change_line=$(grep --line-number --fixed-strings --line-regexp -e "$search_value" etc/httpd/conf/httpd.conf | cut -d: -f1 | head -1 )
-sed --in-place "${change_line}c\\\n$new_value" /etc/httpd/conf/httpd.conf
+if [[ -n $change_line ]]; then
+  sed --in-place "${change_line}c\\\n$new_value" /etc/httpd/conf/httpd.conf
+fi
 
 # Set hostname; bit of a dirty trick
 hostname="$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 | sed 's/$/.xip.io/')"
