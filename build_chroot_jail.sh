@@ -215,11 +215,6 @@ grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/passwd >> "$CHROOT_JAIL_D
 grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/shadow >> "$CHROOT_JAIL_DIR"/etc/shadow
 grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/group  >> "$CHROOT_JAIL_DIR"/etc/group
 
-####    # mysql needs this
-####    if [[ $CHROOT_NAME == "mysql" ]]; then
-####    cp {,/chroot/mysql}/etc/sysconfig/network
-####    fi
-
 # Setup SELinux permissions
 # APACHE only
 ui_print_note "Setting up selinux permissions."
