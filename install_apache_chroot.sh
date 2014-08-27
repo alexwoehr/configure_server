@@ -37,6 +37,10 @@ if [[ -e "$LIB_DIR"/samples/"$CHROOT_NAME".cnf ]]; then
   cp -v "$LIB_DIR"/samples/"$CHROOT_NAME".cnf "$CHROOT_JAIL_DIR"/etc/
 fi
 
+# Copy over some network stuff
+cp /etc/sysconfig/network "$CHROOT_JAIL_DIR"/etc/sysconfig/network
+cp /etc/hosts "$CHROOT_JAIL_DIR"/etc/hosts
+
 # Custom 3Fold stuff
 # mount xvde5 (srv) within the apache chroot
 umount /dev/xvde5 \
@@ -102,6 +106,12 @@ search_value='<Directory "/var/www/html">'
 new_value='<Directory "/srv">'
 change_line=$(grep --line-number --fixed-strings --line-regexp -e "$search_value" etc/httpd/conf/httpd.conf | cut -d: -f1 | head -1 )
 sed --in-place "${change_line}c\\\n$new_value" /etc/httpd/conf/httpd.conf
+
+# Set hostname; bit of a dirty trick
+hostname="$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 | sed 's/$/.xip.io/')"
+chroot "$CHROOT_JAIL_DIR" hostname -F "$hostname"
+# Make sure it resolves even if xip.io goes down
+echo "127.0.0.1\t$hostname" > "$CHROOT_JAIL_DIR"/etc/hosts
 
 # Step down privileges and initiate daemon
 cd "$CHROOT_JAIL_DIR" \
