@@ -57,7 +57,7 @@ ln -s "$CHROOT_JAIL_DIR"/etc/httpd/ /etc/httpd # link httpd configuration root
 chroot "$CHROOT_JAIL_DIR" chown -R apache:apache /srv
 
 # Create contained data files (in httpd owned directories) and update my.cnf to use them
-chroot . bash --login <<END_CMDS
+chroot "$CHROOT_JAIL_DIR" bash --login <<END_CMDS
   for dir in log run; do
     mkdir --parents /var/\$dir/_apache-container
     mv /var/\$dir/{apache*,httpd*,_apache-container/}
