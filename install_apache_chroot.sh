@@ -44,14 +44,14 @@ cp /etc/hosts "$CHROOT_JAIL_DIR"/etc/hosts
 # Custom 3Fold stuff
 # mount xvde5 (srv) within the apache chroot
 umount /dev/xvde5 \
-&& rm -rf --one-file-system "$CHROOT_JAIL"/srv/* \
-&& mount -o defaults,nodev,nosuid /dev/xvde5 "$CHROOT_JAIL"/srv
+&& rm -rf --one-file-system "$CHROOT_JAIL_DIR"/srv/* \
+&& mount -o defaults,nodev,nosuid /dev/xvde5 "$CHROOT_JAIL_DIR"/srv
 
 # link some crucial things from the main server into the chroot. (you can jump in but you can't jump out)
 rm -rf --one-file-system /srv
-ln -s "$CHROOT_JAIL"/srv /srv # link srv root
-rm -rf --one-files-system /etc/httpd
-ln -s "$CHROOT_JAIL"/etc/httpd/ /etc/httpd # link httpd configuration root
+ln -s "$CHROOT_JAIL_DIR"/srv /srv # link srv root
+rm -rf --one-file-system /etc/httpd
+ln -s "$CHROOT_JAIL_DIR"/etc/httpd/ /etc/httpd # link httpd configuration root
 
 # Change srv direcotry we just setup
 chroot "$CHROOT_JAIL_DIR" chown -R apache:apache /srv
