@@ -40,7 +40,7 @@ fi
 mkdir --parents var/run/"$CHROOT_NAME"
 
 # Create contained data files (in mysql owned directory) and update my.cnf to use them
-chroot . <<"END_CMDS"
+chroot . bash --login <<END_CMDS
   for dir in lib log run; do
     sed --in-place 's/var\/'\$dir'/\0\/mysql-container/' /etc/my.cnf
     mkdir --parents /var/\$dir/_mysql-container
