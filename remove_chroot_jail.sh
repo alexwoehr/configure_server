@@ -47,7 +47,7 @@ done
 
 # Delete each fstab reference to the chroot
 # This is done in ***REVERSE ORDER*** (that's super important) because otherwise the line numbers change.
-fstab_lines="$(grep --line-numbers --fixed-strings "$CHROOT_JAIL_DIR" /etc/fstab | tac)"
+fstab_lines="$(grep --line-number --fixed-strings "$CHROOT_JAIL_DIR" /etc/fstab | tac)"
 for line in $fstab_lines; do
   sed --in-place "${line}"d /etc/fstab
 done
@@ -56,7 +56,6 @@ if [[ -e "$CHROOT_LOOP_FILE" ]]; then
   umount "$CHROOT_JAIL_DIR"
   rm --force "$CHROOT_LOOP_FILE"
 else
-  # No loop file, so we have to remove the whole thing.
   rm -rf --one-file-system "$CHROOT_JAIL_DIR"
 fi
 
