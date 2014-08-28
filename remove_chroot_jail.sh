@@ -52,11 +52,11 @@ for line in $fstab_lines; do
   sed --in-place "${line}"d /etc/fstab
 done
 
-umount "$CHROOT_JAIL_DIR"
-
 if [[ -e "$CHROOT_LOOP_FILE" ]]; then
+  umount "$CHROOT_JAIL_DIR"
   rm --force "$CHROOT_LOOP_FILE"
+else
+  # No loop file, so we have to remove the whole thing.
+  rm -rf --one-file-system "$CHROOT_JAIL_DIR"
 fi
-
-rm -rf --one-file-system "$CHROOT_JAIL_DIR"
 
