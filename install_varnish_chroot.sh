@@ -23,7 +23,7 @@ cd "$LIB_DIR"
 yes | ./build_chroot_jail.sh "$CHROOT_NAME"
 
 # install packages for varnish
-chroot "$CHROOT_JAIL" <<END_COMMANDS
+chroot "$CHROOT_JAIL_DIR" <<END_COMMANDS
   rpm --nosignature -i https://repo.varnish-cache.org/redhat/varnish-4.0.el6.rpm
 
   yum --assumeyes install varnish \
@@ -32,19 +32,20 @@ END_COMMANDS
 
 # Copy over sample conf files
 if [[ -e "$LIB_DIR"/samples/"$CHROOT_NAME".defaults ]]; then
-  cp -v "$LIB_DIR"/samples/"$CHROOT_NAME".defaults "$CHROOT_JAIL_DIR"/etc/sysconfig/varnish
+  cp -v "$LIB_DIR"/samples/"$CHROOT_NAME".defaults "$CHROOT_JAIL_DIR"/etc/sysconfig/"$CHROOT_NAME"
 fi
 
-if [[ -e "$LIB_DIR"/samples/"$CHROOT_NAME".default.vcl ]]; then
-  cp -v "$LIB_DIR"/samples/"$CHROOT_NAME".default.vcl "$CHROOT_JAIL_DIR"/etc/varnish/default.vcl
+if [[ -e "$LIB_DIR"/samples/varnish.default.vcl ]]; then
+  cp -v "$LIB_DIR"/samples/varnish.default.vcl "$CHROOT_JAIL_DIR"/etc/varnish/default.vcl
 fi
 
 # Step down privileges and initiate the chrooted daemon
-cd $CHROOT_JAIL_DIR \
-&& chroot "${CHROOT_JAIL_DIR}" su "$CHROOT_USER" /sbin/service varnish start
+cd "$CHROOT_JAIL_DIR" \
+&& chroot . /sbin/service varnish start
 
 # TODO: Create options for--
 # - do not create dev (? does varnish need dev and proc?)
 # - do not copy executables
 # - setup daemon things automatically
+# - setup symbolic link from /etc/varnish to /chroot/varnish/etc/varnish
 
