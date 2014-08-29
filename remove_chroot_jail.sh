@@ -36,7 +36,7 @@ if [[ $1 == "apache" ]]; then
   inner_mounts="$inner_mounts /srv"
 fi
 
-for inner_mount in $INNER_MOUNTS; do
+for inner_mount in $inner_mounts; do
   if umount "$CHROOT_JAIL_DIR""$INNER_MOUNTS"; then
     ui_print_note "Unmounted $INNER_MOUNT successfully."
   else 
@@ -55,6 +55,7 @@ done
 if [[ -e "$CHROOT_LOOP_FILE" ]]; then
   umount "$CHROOT_JAIL_DIR"
   rm --force "$CHROOT_LOOP_FILE"
+  rmdir "$CHROOT_JAIL_DIR"
 else
   rm -rf --one-file-system "$CHROOT_JAIL_DIR"
 fi
