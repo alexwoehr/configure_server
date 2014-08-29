@@ -11,8 +11,9 @@ COMMIT
 :INPUT DROP [1:72]
 :FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
--N 3FX_LOGDROP
--N 3FX_BLOCKED_IPS
+# New chains for blocked IPs
+--new-chain 3FX_LOGDROP
+--new-chain 3FX_BLOCKED_IPS
 :Combined - [0:0]
 
 # First off, blockable IPs
