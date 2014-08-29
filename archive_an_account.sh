@@ -1,7 +1,22 @@
 #!/usr/bin/env bash
 
-ACCOUNT=$1
-ENCRYPTION_KEY=$2
+if [[ -z $1 ]]; then
+  echo "No account found."
+  echo "Aborting..."
+  exit 99
+fi
+
+ACCOUNT="$1"
+
+if [[ -z $2 ]]; then
+  echo "No encryption key found."
+  echo "Please enter it now."
+  read ENCRYPTION_KEY
+else
+  ENCRYPTION_KEY="$2"
+fi
+
+
 cd /srv
 
 # Create directory containing all info pertaining to this client
