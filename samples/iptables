@@ -1,3 +1,12 @@
+# NAT table -- used to step down privileged 80 port to 8000 for varnish's sake
+*nat
+:PREROUTING ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+--append PREROUTING --protocol tcp --dport 80 --jump DNAT --to-destination :8000
+COMMIT
+
+# Filter table
 *filter
 :INPUT DROP [1:72]
 :FORWARD DROP [0:0]
@@ -77,7 +86,11 @@
 # - SSH
 --append INPUT --protocol tcp --dport 22 --jump ACCEPT
 # - HTTP
+# - External facing
 --append INPUT --protocol tcp --dport 80 --jump ACCEPT
+# direct varnish (could hide this one)
+--append INPUT --protocol tcp --dport 8000 --jump ACCEPT
+# apache web server (could hide this one)
 --append INPUT --protocol tcp --dport 8080 --jump ACCEPT
 # - HTTPS
 --append INPUT --protocol tcp --dport 443 --jump ACCEPT
