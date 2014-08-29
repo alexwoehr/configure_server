@@ -6,7 +6,15 @@ Functions
 * Examines the system for over 40 points from the NSA guidelines for securing RHEL
 * Install varnish, mysql, and apache in chroot jails.
 
-Steps to Demonstrate Entire Process
+Steps to Execute Process Automatically
+
+* Create new amazon linux server, M3.large
+* Setup three drives, xvda with 24 GB, xvdb with 24 GB, and xvde with 960 GB
+* Start server, log in, and set root password
+* Execute from your machine: yes | batch_setup_server.sh <HOST> <ROOT_PASSWORD>
+* Restart the server when all is said and done.
+
+Steps to Demonstrate Entire Process Manually
 
 * Create new amazon linux server, M3.large
 * Setup three drives, xvda with 24 GB, xvdb with 24 GB, and xvde with 960 GB
