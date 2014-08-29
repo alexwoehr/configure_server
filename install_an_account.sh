@@ -52,6 +52,33 @@ cp -rf ~-/$ACCOUNT-account/varnish/* etc/varnish/
 # Leave apache chroot, if applicable
 popd
 
+# add mysql tables
+
+# use chroot if possible
+if [[ -e /chroot/mysql ]]; then
+  new_dir=/chroot/mysql
+else
+  new_dir=/
+fi
+
+# Copy files over to ensure we still have access
+mkdir $new_dir/mysql-tmp
+cp -rf $ACCOUNT-account/mysql/* $new_dir/mysql-tmp/
+pushd $new_dir
+
+chroot . <<END_CMDS
+  echo "Have your mysql root password ready..."
+  for file in \$(ls mysql-tmp/); do
+    db="\${file%.sql}"
+    # Create the database
+    echo "CREATE DATABASE \$db;"  |  mysql -B -u root   2>&1   1>/dev/null
+    # Populate the database
+    mysql -B -u root   \$db < mysql-tmp/\$file
+  done
+END_CMDS
+rm -rf --one-file-system $new_dir/mysql-tmp
+
+popd
 
 # use chroot if possible
 if [[ -e /chroot/varnish ]]; then
