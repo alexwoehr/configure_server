@@ -80,6 +80,8 @@ rm -rf --one-file-system $new_dir/mysql-tmp
 
 popd
 
+# copy over varnish configuration
+
 # use chroot if possible
 if [[ -e /chroot/varnish ]]; then
   new_dir=/chroot/varnish
