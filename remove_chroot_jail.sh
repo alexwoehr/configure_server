@@ -60,3 +60,5 @@ else
   rm -rf --one-file-system "$CHROOT_JAIL_DIR"
 fi
 
+# TODO: add a test at the end, whether mount | grep "$CHROOT_JAIL_DIR" returns anything.
+
