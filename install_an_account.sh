@@ -21,9 +21,12 @@ fi
 pushd /srv
 
 # First, Untar the main folder, that contains all the data
-cat "$ACCOUNT"-account.tar.xz.gpg | gpg --decrypt --batch --passphrase="$ENCRYPTION_KEY" > "$ACCOUNT"-account.tar.xz.gpg
-unxz "$ACCOUNT"-account.tar
-tar xf "$ACCOUNT"-account.tar "$ACCOUNT"-account
+< "$ACCOUNT"-account.tar.xz.gpg \
+  gpg --decrypt --batch --passphrase="$ENCRYPTION_KEY" \
+> "$ACCOUNT"-account.tar.xz
+
+unxz "$ACCOUNT"-account.tar.xz
+tar xf "$ACCOUNT"-account.tar
 
 # Setup directories
 # mkdir --parents "$ACCOUNT"-account/{varnish,mysql,httpd/sites/"$ACCOUNT",tls/{certs,private},srv/$ACCOUNT/{logs,tmp,www.$ACCOUNT.com,testing.$ACCOUNT.com,htpasswds,notes,ftp,archives}}
