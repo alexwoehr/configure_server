@@ -33,16 +33,36 @@ tar xf "$ACCOUNT"-account.tar
 
 # TODO: some kind of backups, plus protecting from hurting other accounts
 # TODO: check if there's an existing account before clobbering
-# Merge apache documents into the system
-cp -rf $ACCOUNT-account/srv/* /srv
+
+# Use the right directory if there's an apache chroot
+if [[ -e /chroot/apache ]]; then
+  pushd /chroot/apache
+else
+  pushd /
+fi
+
+# Copy main directory over (apache's documents)
+cp -rf ~-/$ACCOUNT-account/srv/* srv/
 
 # Merge everything into the system
-cp -rf $ACCOUNT-account/httpd /etc/
-cp -rf $ACCOUNT-account/tls /etc/pki/
-cp -rf $ACCOUNT-account/varnish /etc/varnish/
+cp -rf ~-/$ACCOUNT-account/httpd/* etc/httpd/
+cp -rf ~-/$ACCOUNT-account/tls/* etc/pki/tls/
+cp -rf ~-/$ACCOUNT-account/varnish/* etc/varnish/
 
-# TODO: dump mysql tables
-# TODO: copy over varnish configuration
+# Leave apache chroot, if applicable
+popd
+
+
+# use chroot if possible
+if [[ -e /chroot/varnish ]]; then
+  new_dir=/chroot/varnish
+else
+  new_dir=/
+fi
+
+pushd $new_dir
+cp -rf ~-/$ACCOUNT-account/varnish/* etc/varnish/
+popd
 
 # TODO: Clean up extra files we generated
 # 
