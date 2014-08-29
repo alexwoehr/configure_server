@@ -4,7 +4,7 @@
 ACCOUNT=$1
 ENCRYPTION_KEY=$2
 
-cd /srv
+pushd /srv
 
 # First, Untar the main folder, that contains all the data
 cat "$ACCOUNT"-account.tar.xz.gpg | gpg --decrypt --batch --passphrase="$ENCRYPTION_KEY" > "$ACCOUNT"-account.tar.xz.gpg
@@ -27,8 +27,14 @@ cp -rf $ACCOUNT-account/varnish /etc/varnish/
 # TODO: dump mysql tables
 # TODO: copy over varnish configuration
 
-# Clean up extra files we generated
+# TODO: Clean up extra files we generated
 # 
+
+popd
+
+#### MYSQL ARCHIVE
+#### pushd /chroot/mysql/root
+#### mysqldump -u root -p --skip-lock-tables 3foldx | gpg --symmetric --batch --passphrase="$ENCRYPTION_KEY" > 3foldx.sql.gpg
 
 echo "Account deployed from tarball."
 
