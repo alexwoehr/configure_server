@@ -42,6 +42,10 @@ readonly CHROOT_GROUP=chroot_group
 # Packages to install
 readonly PACKAGES="rpm-build yum initscripts"
 
+ui_start_task "Dependencies"
+yum --assumeyes install e2fsprogs
+ui_end_task "Dependencies"
+
 ui_start_task "Create chroot loop partition"
 
 if [[ -e "$CHROOT_LOOP_FILE" ]]; then
