@@ -1407,7 +1407,7 @@ else
         echo "# $comment\\"
       fi
       # new line: new configuration line
-      echo "password	$stacking	pam_cracklib try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1"
+      echo "password	$stacking	pam_cracklib.so try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1"
     }
 
     # File (filename after removing directory)
