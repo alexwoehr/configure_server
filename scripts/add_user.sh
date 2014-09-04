@@ -48,17 +48,14 @@ home_dir=/home/$user
 
 echo ".. Creating user '$user' ..."
 
-useradd --home-dir $home_dir -m --user-group --groups humans,wheel --shell /bin/bash $user \
-|| (echo "ERROR: useradd failed with error #$? so exiting..." && exit 1) || exit 1
-
 # Run our main command
 useradd \
-  --home $homedir \
+  --user-group \
   --create-home \
+  --home $homedir \
   --key UID_MIN=500 \
   --key UID_MAX=599 \
   --key UMASK=077 \
-  --user-group \
   $user \
 && echo "... User created." \
 || (echo "... ERROR: Could not create user, #$?. Exiting..." && exit 1) || exit 1
