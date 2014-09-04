@@ -78,12 +78,12 @@ else
   echo "Please paste their ssh public key in 'ssh-rsa' format:"
   read pubkey
 
-  l=mkdir $l --parents         $home_dir/.ssh \
-  && l=echo  $l                >  $home_dir/.ssh/authorized_keys \
-  && l=echo  $l $pubkey        >> $home_dir/.ssh/authorized_keys \
-  && l=chown $l -R $user:$user $home_dir/.ssh \
-  && l=chmod $l -R u+rw        $home_dir/.ssh \
-  && l=chmod $l -R go-rwx      $home_dir/.ssh \
+  mkdir --parents         $home_dir/.ssh \
+  && echo                    >  $home_dir/.ssh/authorized_keys \
+  && echo     $pubkey        >> $home_dir/.ssh/authorized_keys \
+  && chown    -R $user:$user $home_dir/.ssh \
+  && chmod    -R u+rw        $home_dir/.ssh \
+  && chmod    -R go-rwx      $home_dir/.ssh \
   || (echo "ERROR: Could not save public key. $l failed with error #$?." && exit 1) || exit 1
 
 fi
