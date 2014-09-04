@@ -59,8 +59,6 @@ useradd \
   --key UID_MAX=599 \
   --key UMASK=077 \
   --user-group \
-  --groups $group \
-  --shell /sbin/nologin \
   $user \
 && echo "... User created." \
 || (echo "... ERROR: Could not create user, #$?. Exiting..." && exit 1) || exit 1
