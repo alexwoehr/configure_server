@@ -17,28 +17,31 @@
 # - [x] move into the /var/lib/setup_script directory and version correctly
 # - [x] cleanup intermediate files, optionally
 # - [ ] better documentation
-# - [ ] needs reporting, prompts
+# - [x] needs reporting, prompts
 # - [ ] all functions should allow rate limiting, including cp
+# - [ ] use nice as well to keep things in line during archive process
 # - [x] handle clobbering
-# - [ ] roll patching function into this file
+# - [x] roll patching function into this file
 # - [ ] install any packages required by the site
-# - [ ] implement subcommand oriented approach, similar to github
+# - [ ] overhaul: implement subcommand oriented approach, similar to github
 # - [ ] add universal long options shared between subcommands
 # - [ ] use an xml file to package account data
 # - [ ] support nginx configuration
 # - [ ] support haproxy configuration
+# - [ ] support postgres databases
 # HTTPD:
 # - [ ] handle situation where they haven't updated httpd conf paths properly. Remind them to edit conf fil
 # Databases:
-# - [ ] support postgres
-# - [ ] consider adding "--databases --add-drop-database" to mysqldump, if clobber option is set
+# - [ ] consider adding "--databases --add-drop-database" to suggested mysqldump command, if clobber option is set
 # - [ ] when the script tries to grab a database, if there is no database to grab, it will warn the user.
 # - [ ] if there is no database that matches the convention, show the user a list of databases, and allow them to select the database to export.
-# - [ ] support integrating into my.cnf
+# - [ ] support integrating into my.cnf, etc
 # Packaging:
 # - [ ] warn if any gpg files exist in the account directory
 # - [ ] no options regarding clobbering
 # - [ ] this function is a little long. Consider breaking it up.
+#
+# See more todo's sprinkled below.
 
 ###########################
 #
