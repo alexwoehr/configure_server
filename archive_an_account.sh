@@ -196,8 +196,8 @@ END_MACRO
 # Creates a skeleton of directories to hold data about this account
 # 
 create_skeleton() {
-  ACCOUNT="$1"
-  DESTINATION_DIR="$2"
+  local ACCOUNT="$1"
+  local DESTINATION_DIR="$2"
 
   source <(
     vars_macro "$ACCOUNT" "$DESTINATION_DIR"
@@ -237,8 +237,7 @@ create_skeleton() {
 # Gather all the resources that should be archived for this site.
 # 
 gather() {
-  ACCOUNT="$1"
-  DESTINATION_DIR="$2"
+  local ACCOUNT="$1"
 
   local proceed
 
