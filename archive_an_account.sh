@@ -342,7 +342,7 @@ gather_apache() {
 
   # Document Root
   # Copy contents of main directory over
-  cp -rf srv/"$ACCOUNT" "$DESTINATION_DIR"/srv/
+  cp -vrf srv/"$ACCOUNT" "$DESTINATION_DIR"/srv/.
 
   # Apache Configuration
   # 
@@ -363,7 +363,7 @@ gather_apache() {
   fi
 
   ui_print_note "Copying files..."
-  cp -vrf etc/httpd/sites/"$ACCOUNT"/ "$ACCOUNT_DIR"/httpd/sites/
+  cp -vrf etc/httpd/sites/"$ACCOUNT"/ "$ACCOUNT_DIR"/httpd/sites/.
 
   # Copy SSL certs, csr's, and keys
   # Look for expected folder for SSL stuff
@@ -383,8 +383,8 @@ gather_apache() {
 
   # Copy the files
   ui_print_note "Copying files..."
-  cp -vrf /etc/pki/tls/certs/"$ACCOUNT" $ACCOUNT_DIR/tls/certs/"$ACCOUNT"/
-  cp -vrf /etc/pki/tls/private/"$ACCOUNT" $ACCOUNT_DIR/tls/private/"$ACCOUNT"/
+  cp -vrf /etc/pki/tls/certs/"$ACCOUNT" $ACCOUNT_DIR/tls/certs/.
+  cp -vrf /etc/pki/tls/private/"$ACCOUNT" $ACCOUNT_DIR/tls/private/.
 
   # End of apache section
   popd
@@ -459,7 +459,7 @@ gather_varnish() {
   fi
 
   ui_print_note "Copying files..."
-  cp -vrf etc/varnish/"$ACCOUNT"/ "$ACCOUNT_DIR"/varnish/
+  cp -vrf etc/varnish/"$ACCOUNT"/ "$ACCOUNT_DIR"/varnish/.
 
   # End of varnish section
   popd
