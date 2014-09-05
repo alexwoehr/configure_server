@@ -77,7 +77,7 @@ main() {
   ########################
   # Script Parameters: currently ACCOUNT and ENCRYPTION KEY
   source <(
-    verify_options_macro
+    verify_options_macro "$@"
   )
 
   ########################
@@ -138,7 +138,7 @@ verify_options_macro() {
   ACCOUNT="$1"
 
   # DESTINATION_DIR: destination for example-account/ directory, example-account.tar.xz.gpg, etc
-  # read if they don't provide this
+  # read if they didn't provide this
   if [[ -z $2 ]]; then
     ui_print_note "No destination directory found."
     source <(
@@ -147,6 +147,8 @@ verify_options_macro() {
     ui_print_note "OK, using $DESTINATION_DIR"
   fi
 
+  # ENCRYPTION_KEY: for encrypting the archive, at the end
+  # read if they didn't provide this
   if [[ -z $3 ]]; then
     ui_print_note "No encryption key found."
     ui_print_note "Please enter it now."
