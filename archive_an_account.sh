@@ -326,7 +326,7 @@ gather_apache() {
   fi
 
   # If no apache root yet, default to system root
-  if [[ -z APACHE_ROOT ]]; then
+  if [[ -z $APACHE_ROOT ]]; then
     source <(
       ui_prompt_macro "Enter root of apache system? (system root is default) [/]" APACHE_ROOT "/"
     )
