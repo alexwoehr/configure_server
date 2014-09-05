@@ -18,7 +18,7 @@
 # - [ ] cleanup extra files, optionally
 # - [ ] better documentation
 # - [ ] needs reporting, prompts
-# - [ ] all functions should allow rate limiting
+# - [ ] all functions should allow rate limiting, including cp
 # - [ ] handle clobbering
 # - [ ] roll patching function into this file
 # - [ ] install any packages required by the site
@@ -38,6 +38,7 @@
 # Packaging:
 # - [ ] warn if any gpg files exist in the account directory
 # - [ ] no options regarding clobbering
+# - [ ] this function is a little long. Consider breaking it up.
 
 ###########################
 #
