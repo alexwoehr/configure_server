@@ -585,9 +585,14 @@ gather_mysql() {
     CHROOT_CMD="chroot /chroot/mysql"
   fi
 
-  echo "Please dump mysql and hit enter when you return"
-  echo "To show databases use something like: \n    echo 'SHOW DATABASES;' | $CHROOT_CMD mysql -B -u root -p"
-  echo "To dump databases use something like: \n    $CHROOT_CMD mysqldump -u root -p --skip-lock-tables ${ACCOUNT}_wordpress > $ACCOUNT_DIR/mysql/${ACCOUNT}_wordpress.sql"
+  cat <<END_CAT
+  Please dump mysql and hit enter when you return
+To show databases use something like:
+    echo 'SHOW DATABASES;' | $CHROOT_CMD mysql -B -u root -p
+To dump databases use something like:
+    $CHROOT_CMD mysqldump -u root -p --skip-lock-tables ${ACCOUNT}_wordpress > $ACCOUNT_DIR/mysql/${ACCOUNT}_wordpress.sql
+END_CAT
+
   read proceed
 
   # Check if any files were added
