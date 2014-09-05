@@ -57,7 +57,7 @@ export TOP_PID=$$
 
 # Utilities
 die_hard() {
-  kill --signal TERM "$TOP_PID"
+  kill -s TERM "$TOP_PID"
 }
 
 ###########################
