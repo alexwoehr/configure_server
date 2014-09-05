@@ -285,7 +285,7 @@ gather() {
   )
   if [[ $proceed == "y" ]]; then
     ui_start_task "Gathering log files"
-    gather_mysql "$ACCOUNT" "$DESTINATION_DIR"
+    gather_logs "$ACCOUNT" "$DESTINATION_DIR"
     ui_end_task "Gathering log files"
   fi
 
