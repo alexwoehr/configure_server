@@ -320,7 +320,6 @@ gather_apache() {
     )
 
     if [[ $proceed == "y" ]]; then
-      ui_print_note "OK, using /chroot/apache"
       APACHE_ROOT="/chroot/apache"
     fi
   fi
@@ -331,6 +330,8 @@ gather_apache() {
       ui_prompt_macro "Enter root of apache system? (system root is default) [/]" APACHE_ROOT "/"
     )
   fi
+
+  ui_print_note "Using apache chroot: $APACHE_ROOT"
 
   ###########################
   #
