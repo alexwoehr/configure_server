@@ -473,6 +473,15 @@ gather_varnish() {
 # Gather databases for mysql.
 # 
 gather_mysql() {
+  ACCOUNT="$1"
+  DESTINATION_DIR="$2"
+
+  source <(
+    vars_macro "$ACCOUNT" "$DESTINATION_DIR"
+  )
+
+  local proceed
+
   # TODO: dump mysql tables, copy over varnish configuration
   #### Dump and save mysql tables
   # Use chroot if available
@@ -484,6 +493,7 @@ gather_mysql() {
   #### chroot . mysqldump -u root -p --skip-lock-tables smf > ~-/$ACCOUNT-account/mysql/smf.sql
   #### popd
   local CHROOT_CMD=""
+
   if [[ -e /chroot/mysql ]]; then
     CHROOT_CMD="chroot /chroot/mysql"
   fi
@@ -494,7 +504,7 @@ gather_mysql() {
   read proceed
 
   # Check if any files were added
-  if [[ -z "$(ls -d $ACCOUNT_DIR/mysql)" ]]; then
+  if [[ -z "$(ls -d "$ACCOUNT_DIR"/mysql)" ]]; then
     ui_print_note "WARNING! mysql directory is empty. No databases will be created. Strike enter to really continue."
     ui_press_any_key
   fi
