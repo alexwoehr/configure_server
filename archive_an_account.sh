@@ -338,7 +338,7 @@ gather_apache() {
   # 
 
   # Use root we decided on
-  pushd APACHE_ROOT
+  pushd "$APACHE_ROOT"
 
   # Document Root
   # Copy contents of main directory over
@@ -438,7 +438,7 @@ gather_varnish() {
   # 
 
   # Use root we decided on
-  pushd VARNISH_ROOT
+  pushd "$VARNISH_ROOT"
 
   # Varnish Configuration
   # 
