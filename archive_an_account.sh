@@ -51,6 +51,15 @@ source ./setup_vars.sh \
 # Limit Command
 LIMIT_CMD="pv --limit 4M"
 
+# Facilitate quitting top level script
+trap "exit 99" TERM
+export TOP_PID=$$
+
+# Utilities
+die_hard() {
+  kill --signal TERM "$TOP_PID"
+}
+
 ###########################
 #
 # Global imports
@@ -121,7 +130,9 @@ verify_options_macro() {
   if [[ -z $1 ]]; then
     ui_print_note "No account found."
     ui_print_note "Aborting..."
-    exit 99
+
+    # Die hard
+    die_hard
   fi
 
   ACCOUNT="$1"
@@ -134,7 +145,6 @@ verify_options_macro() {
       ui_prompt_macro "Please enter directory, or ENTER to default to home? [$(pwd)]" DESTINATION_DIR "$(pwd)"
     )
     ui_print_note "OK, using $DESTINATION_DIR"
-    exit 99
   fi
 
   if [[ -z $3 ]]; then
