@@ -15,7 +15,7 @@
 # 
 # General:
 # - [x] move into the /var/lib/setup_script directory and version correctly
-# - [ ] cleanup extra files, optionally
+# - [x] cleanup intermediate files, optionally
 # - [ ] better documentation
 # - [ ] needs reporting, prompts
 # - [ ] all functions should allow rate limiting, including cp
@@ -773,6 +773,22 @@ package() {
     # - Could depend on conflict resolution mode...dunno
     # 
     #rm -rf "$ACCOUNT"-account{.tar{.xz,},/}
+
+    source <(
+      ui_prompt_macro "Clean up intermediate files now? [y/N]" proceed n
+    )
+
+    if [[ $proceed != "y" ]]; then
+      ui_print_note "OK, skipping."
+    else
+      ui_print_note "OK, removing files."
+      rm -rf --one-file-system $ACCOUNT_DIR
+      rm -rf --one-file-system $ACCOUNT_DIR.tar
+      # TODO: could ask whether to delete sig
+      rm -rf --one-file-system $compress_file
+      rm -rf --one-file-system $compress_file.xz
+      # of course, don't remove the gpg!
+    fi
 
     ui_print_note "Account archive generated. Saved to:"
     ui_print_list <<<"    $compress_file.xz.gpg"
