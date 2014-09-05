@@ -343,6 +343,7 @@ gather_apache() {
 
   # Document Root
   # Copy contents of main directory over
+  ui_print_note "Gathering document root: contents of /srv directory"
   cp -rf srv/"$ACCOUNT"/ "$ACCOUNT_DIR"/srv/.
 
   # Apache Configuration
@@ -350,6 +351,7 @@ gather_apache() {
   # Search for config
 
   # Look for expected folder for httpd account
+  ui_print_note "Gathering apache configuration (/etc/httpd)"
   if [[ -d etc/httpd/sites/"$ACCOUNT" ]]; then
     # Directory exists
     ui_print_note "Found expected apache config."
@@ -363,11 +365,12 @@ gather_apache() {
     ui_press_any_key
   fi
 
-  ui_print_note "Copying files..."
+  ui_print_note "Copying conf directories..."
   cp -vrf etc/httpd/sites/"$ACCOUNT"/ "$ACCOUNT_DIR"/httpd/sites/.
 
   # Copy SSL certs, csr's, and keys
   # Look for expected folder for SSL stuff
+  ui_print_note "Gathering SSL configuration (/etc/pki/tls)"
   if [[ -d etc/pki/tls/certs/"$ACCOUNT" && etc/pki/tls/private/"$ACCOUNT" ]]; then
     # Directory exists
     ui_print_note "Found expected SSL files."
@@ -383,7 +386,7 @@ gather_apache() {
   fi
 
   # Copy the files
-  ui_print_note "Copying files..."
+  ui_print_note "Copying tls files..."
   cp -vrf /etc/pki/tls/certs/"$ACCOUNT"/ $ACCOUNT_DIR/tls/certs/.
   cp -vrf /etc/pki/tls/private/"$ACCOUNT"/ $ACCOUNT_DIR/tls/private/.
 
