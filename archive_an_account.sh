@@ -78,48 +78,45 @@ main() {
   local ENCRYPTION_KEY
 
   ########################
-  # Script Parameters: currently ACCOUNT and ENCRYPTION KEY
+  # Script Parameters: currently ACCOUNT, DESTINATION_DIR, and ENCRYPTION KEY
   source <(
     verify_options_macro "$@"
   )
 
   ########################
   # Create skeleton for the account
+  ui_section "Create Skeleton"
   source <(
     ui_prompt_macro "Create skeleton for the account? [y/N]" proceed n
   )
   if [[ $proceed != "y" ]]; then
     ui_print_note "OK, skipping..."
   else
-    ui_start_task "Create Skeleton"
     create_skeleton "$ACCOUNT" "$DESTINATION_DIR"
-    ui_end_task "Create Skeleton"
   fi
 
   ########################
   # Gather the bits and pieces of this account
+  ui_section "Gather resources"
   source <(
     ui_prompt_macro "Gather resources for this account? [y/N]" proceed n
   )
   if [[ $proceed != "y" ]]; then
     ui_print_note "OK, skipping..."
   else
-    ui_start_task "Gather Resources"
     gather "$ACCOUNT" "$DESTINATION_DIR"
-    ui_end_task "Gather Resources"
   fi
 
   ########################
   # Package up the data
+  ui_section "Package up the account"
   source <(
     ui_prompt_macro "Package the account? [y/N]" proceed n
   )
   if [[ $proceed != "y" ]]; then
     ui_print_note "OK, skipping..."
   else
-    ui_start_task "Package Account"
     package "$ACCOUNT" "$DESTINATION_DIR" "$ENCRYPTION_KEY"
-    ui_end_task "Package Account"
   fi
 
 }
