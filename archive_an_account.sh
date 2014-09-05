@@ -342,7 +342,7 @@ gather_apache() {
 
   # Document Root
   # Copy contents of main directory over
-  cp -vrf srv/"$ACCOUNT"/ "$ACCOUNT_DIR"/srv/.
+  cp -rf srv/"$ACCOUNT"/ "$ACCOUNT_DIR"/srv/.
 
   # Apache Configuration
   # 
