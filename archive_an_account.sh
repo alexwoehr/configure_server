@@ -557,7 +557,9 @@ package() {
     # Compress and encrypt the entire account directory
     ui_print_note "Creating the directory archive file..."
     if [[ ! -e $ACCOUNT_DIR.tar ]]; then
-      tar c $ACCOUNT_DIR > $ACCOUNT_DIR.tar
+      tar c "$ACCOUNT_DIR" \
+        | $LIMIT_CMD \
+        > "$ACCOUNT_DIR.tar"
     fi
 
     # Determine whether to do a full archive or incremental
