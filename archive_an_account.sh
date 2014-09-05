@@ -288,28 +288,28 @@ create_skeleton() {
   }
 
   # Root
-  create_skeleton_dir "$ACCOUNT_DIR"
+  create_skeleton_dir "$CONFLICT_MODE" "$ACCOUNT_DIR"
 
   # Varnish
-  create_skeleton_dir "$ACCOUNT_DIR"/varnish/"$ACCOUNT"/
+  create_skeleton_dir "$CONFLICT_MODE" "$ACCOUNT_DIR"/varnish/"$ACCOUNT"/
   touch "$ACCOUNT_DIR"/varnish/"$ACCOUNT"/index.vcl
 
   # HTTPD
-  create_skeleton_dir "$ACCOUNT_DIR"/httpd/sites/"$ACCOUNT"/
+  create_skeleton_dir "$CONFLICT_MODE" "$ACCOUNT_DIR"/httpd/sites/"$ACCOUNT"/
   touch "$ACCOUNT_DIR"/httpd/sites/"$ACCOUNT"/index.conf
 
   # SRV -- http root
   local dir
   for dir in logs tmp htpasswds notes ftp archives; do
-    create_skeleton_dir "$ACCOUNT_DIR"/srv/"$ACCOUNT"/"$dir"/
+    create_skeleton_dir "$CONFLICT_MODE" "$ACCOUNT_DIR"/srv/"$ACCOUNT"/"$dir"/
   done
 
   # SSL data
-  create_skeleton_dir "$ACCOUNT_DIR"/tls/certs/"$ACCOUNT"/
-  create_skeleton_dir "$ACCOUNT_DIR"/tls/private/"$ACCOUNT"/
+  create_skeleton_dir "$CONFLICT_MODE" "$ACCOUNT_DIR"/tls/certs/"$ACCOUNT"/
+  create_skeleton_dir "$CONFLICT_MODE" "$ACCOUNT_DIR"/tls/private/"$ACCOUNT"/
 
   # MySQL
-  create_skeleton_dir "$ACCOUNT_DIR"/mysql/"$ACCOUNT"/
+  create_skeleton_dir "$CONFLICT_MODE" "$ACCOUNT_DIR"/mysql/"$ACCOUNT"/
 }
 
 ###########################
@@ -651,7 +651,7 @@ package() {
     else
       # Need to resolve conflict
       if [[ $CONFLICT_MODE == "safe" || $CONFLICT_MODE == "add" ]]; then
-	ui_print_note "Warning: Conflict detected! Could not create directory due to conflict: $DIR"
+	ui_print_note "Warning: Conflict detected! Could not create file due to conflict: $FILE"
 	# do nothing
       elif [[ $CONFLICT_MODE == "confirm" ]]; then
 	local CONFLICT_DECISION
