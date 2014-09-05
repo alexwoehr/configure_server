@@ -551,26 +551,73 @@ package() {
 
   else
 
-    # Compress and encrypt the directory
-    ui_print_note "Compressing the directory..."
+    # Compress and encrypt the entire account directory
+    ui_print_note "Creating the directory archive file..."
     if [[ ! -e $ACCOUNT_DIR.tar ]]; then
       tar c $ACCOUNT_DIR > $ACCOUNT_DIR.tar
     fi
-    if [[ ! -e $ACCOUNT_DIR.tar.xz ]]; then
-    xz -c $ACCOUNT_DIR.tar | $LIMIT_CMD > $ACCOUNT_DIR.tar.xz
+
+    # Determine whether to do a full archive or incremental
+    source <(
+      ui_prompt_macro "Generate incremental archive from previous version? [y/N]" proceed n
+    )
+
+    local compress_file
+    if [[ $proceed != "y" ]]; then
+      ui_print_note "OK, generating full backup..."
+      compress_file="$ACCOUNT_DIR.tar"
+    else
+      ui_print_note "Generating rdiff incremental patchfile..."
+      local OLD_ARCHIVE
+      source <(
+        ui_prompt_macro "Please enter the path of the old archive or its signature." OLD_ARCHIVE n
+      )
+
+      # Strip off sig if that's all they have
+      # If they gave us a sig already, we'll skip the generation of sigs.
+      OLD_ARCHIVE="${OLD_ARCHIVE%.sig}"
+
+      # TODO: handle dependencies a LOT more gracefully
+      ui_print_note "Installing dependencies as necessary..."
+      yum --assumeyes --enablerepo=epel install rdiff-backup
+
+      # If sig exists already, skip generation
+      if [[ ! -e $OLD_ARCHIVE.sig ]]; then
+        ui_print_note "Generating rdiff signatures..."
+        rdiff signature \
+          $OLD_ARCHIVE \
+          $OLD_ARCHIVE.sig
+      fi
+
+      if [[ ! -e $ACCOUNT_DIR.tar.delta ]]; then
+        ui_print_note "Generating rdiff delta..."
+        rdiff delta \
+          $OLD_ARCHIVE.sig \
+          $ACCOUNT_DIR.tar \
+          $ACCOUNT_DIR.tar.delta
+      fi
+
+      compress_file="$ACCOUNT_DIR.tar.delta"
     fi
+
+    if [[ ! -e $compress_file.xz ]]; then
+      ui_print_note "Compressing the archive..."
+      xz -c $compress_file | $LIMIT_CMD > $compress_file.xz
+    fi
+
     ui_print_note "Encrypting the archive..."
     if [[ ! -e $ACCOUNT_DIR.tar.xz.gpg ]]; then
-    cat $ACCOUNT_DIR.tar.xz | gpg --symmetric --batch --passphrase="$ENCRYPTION_KEY" \
-      | $LIMIT_CMD > ACCOUNT_DIR.tar.xz.gpg
+      cat $compress_file.xz \
+        | gpg --symmetric --batch --passphrase="$ENCRYPTION_KEY" \
+        | $LIMIT_CMD > $compress_file.xz.gpg
     fi
 
     # TODO: Clean up extra files we generated. Confirm first!
     # 
     #rm -rf "$ACCOUNT"-account{.tar{.xz,},/}
 
-    ui_print_note "Account tarball generated. Saved to:"
-    ui_print_list "    $ACCOUNT_DIR.tar.xz"
+    ui_print_note "Account archive generated. Saved to:"
+    ui_print_list "    $compress_file.xz.gpg"
 
   fi
 }
