@@ -19,7 +19,7 @@
 # - [ ] better documentation
 # - [ ] needs reporting, prompts
 # - [ ] all functions should allow rate limiting, including cp
-# - [ ] handle clobbering
+# - [x] handle clobbering
 # - [ ] roll patching function into this file
 # - [ ] install any packages required by the site
 # - [ ] implement subcommand oriented approach, similar to github
