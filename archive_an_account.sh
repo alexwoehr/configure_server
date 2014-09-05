@@ -11,7 +11,7 @@
 # - $DESTINATION_DIR: directory that will hold the archive and other files.
 # - $ENCRYPTION_KEY: key to encrypt / decrypt the archive
 
-# TODO sectionbelow
+# TODO section below
 # 
 # General:
 # - [x] move into the /var/lib/setup_script directory and version correctly
@@ -625,7 +625,7 @@ package() {
 ###########################
 #
 # Body
-# 
+#
 # Execute main function
 main "$@"
 
