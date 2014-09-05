@@ -94,9 +94,10 @@ main() {
 
   ui_print_list <<-END_LIST
 	safe: do not create a resource at all if it conflicts with an existing archive or resource.
+	confirm: confirm what to do
 	add: only merge directories or add new files, do not overwrite any files. When in doubt, this functions like safe.
-	clobber: any existing files are simply overwritten. However, when merging directories, files omitted from the new archive are not deleted.
-	reinstall: remove any existing resources before installing new resource.
+	merge: any existing files are simply overwritten. However, when merging directories, files omitted from the new archive are not deleted.
+	clean: remove any existing resources cleanly before installing new resource.
 	END_LIST
 
   source <(
@@ -229,29 +230,82 @@ create_skeleton() {
 
   ui_print_note "Creating skeleton at directory $ACCOUNT_DIR..."
 
+  # Abstract mkdir with the following function, in order to implement conflict resolution
+  create_skeleton_dir() {
+    local CONFLICT_MODE="$1"
+    local DIR="$2"
+
+    ui_print_note "Creating $DIR..."
+
+    if [[ ! -e $DIR ]]; then
+      # Normal case
+      mkdir --parents "$DIR"
+    else
+      # Need to resolve conflict
+      # Alert user
+      if [[ $CONFLICT_MODE == "safe" ]]; then
+        ui_print_note "Warning: Conflict detected! Could not create directory due to conflict: $DIR"
+      elif [[ $CONFLICT_MODE == "confirm" ]]; then
+        local CONFLICT_DECISION
+        ui_print_note "Warning: Conflict detected! $DIR already exists!"
+        ui_print_note "CONFIRM MODE. Please confirm how you would like to handle this conflict."
+        ui_print_list <<-END_LIST
+		skip: Take no other action.
+		clean: Remove the existing directory before proceeding.
+	END_LIST
+        source <(
+          ui_prompt_macro "Please specify how to handle" CONFLICT_DECISION "skip"
+        )
+
+        if [[ $CONFLICT_DECISION == "y" || $CONFLICT_DECISION == "skip" ]]; then
+          exit 1
+        elif [[ $CONFLICT_DECISION == "clean" ]]; then
+          # Remove the directory
+	  rm -rf --one-file-system "$DIR"
+	  mkdir --parents "$DIR"
+        fi
+
+      elif [[ $CONFLICT_MODE == "add" || $CONFLICT_MODE == "merge" ]]; then
+
+        ui_print_note "Notice: Conflict detected! $DIR already exists."
+        ui_print_note "Using conflict resolution strategy '$CONFLICT_MODE'"
+	mkdir --parents "$DIR"
+	
+      elif [[ $CONFLICT_MODE == "clean" ]]; then
+
+        ui_print_note "Notice: Conflict detected! $DIR already exists."
+        ui_print_note "Using conflict resolution strategy '$CONFLICT_MODE'"
+	ui_print_note "Removing old directory and recreating it..."
+	rm -rf --one-file-system "$DIR"
+	mkdir --parents "$DIR"
+	
+      fi
+    fi
+  }
+
   # Root
-  mkdir --parents "$ACCOUNT_DIR"
+  create_skeleton_dir "$ACCOUNT_DIR"
 
   # Varnish
-  mkdir --parents "$ACCOUNT_DIR"/varnish/"$ACCOUNT"/
+  create_skeleton_dir "$ACCOUNT_DIR"/varnish/"$ACCOUNT"/
   touch "$ACCOUNT_DIR"/varnish/"$ACCOUNT"/index.vcl
 
   # HTTPD
-  mkdir --parents "$ACCOUNT_DIR"/httpd/sites/"$ACCOUNT"/
+  create_skeleton_dir "$ACCOUNT_DIR"/httpd/sites/"$ACCOUNT"/
   touch "$ACCOUNT_DIR"/httpd/sites/"$ACCOUNT"/index.conf
 
   # SRV -- http root
   local dir
   for dir in logs tmp htpasswds notes ftp archives; do
-    mkdir --parents "$ACCOUNT_DIR"/srv/"$ACCOUNT"/"$dir"/
+    create_skeleton_dir "$ACCOUNT_DIR"/srv/"$ACCOUNT"/"$dir"/
   done
 
   # SSL data
-  mkdir --parents "$ACCOUNT_DIR"/tls/certs/"$ACCOUNT"/
-  mkdir --parents "$ACCOUNT_DIR"/tls/private/"$ACCOUNT"/
+  create_skeleton_dir "$ACCOUNT_DIR"/tls/certs/"$ACCOUNT"/
+  create_skeleton_dir "$ACCOUNT_DIR"/tls/private/"$ACCOUNT"/
 
   # MySQL
-  mkdir --parents "$ACCOUNT_DIR"/mysql/"$ACCOUNT"/
+  create_skeleton_dir "$ACCOUNT_DIR"/mysql/"$ACCOUNT"/
 }
 
 ###########################
@@ -562,6 +616,9 @@ gather_logs() {
 # Package the account: tar, compress, encrypt
 # 
 package() {
+  # Variables
+  #
+  # Parameters
   ACCOUNT="$1"
   DESTINATION_DIR="$2"
   ENCRYPTION_KEY="$3"
@@ -570,6 +627,54 @@ package() {
   source <(
     vars_macro "$ACCOUNT" "$DESTINATION_DIR"
   )
+
+  # Function to help us resolve file conflicts
+  #
+  # Resolve conflicts for individual files
+  package_resolve_conflict() {
+    local CONFLICT_MODE="$1"
+    local FILE="$2"
+    local CMD="$3"
+    local proceed
+
+    if [[ ! -e $FILE ]]; then
+      eval "$CMD"
+    else
+      # Need to resolve conflict
+      if [[ $CONFLICT_MODE == "safe" || $CONFLICT_MODE == "add" ]]; then
+	ui_print_note "Warning: Conflict detected! Could not create directory due to conflict: $DIR"
+	# do nothing
+      elif [[ $CONFLICT_MODE == "confirm" ]]; then
+	local CONFLICT_DECISION
+	ui_print_note "Warning: Conflict detected! file '$FILE' already exists!"
+	ui_print_note "CONFIRM MODE. Please confirm how you would like to handle this conflict."
+	ui_print_list <<-END_LIST
+		skip: Take no other action. Skip to next step, using current file.
+		clean: Remove the existing file before proceeding.
+	END_LIST
+	local CONFLICT_DECISION
+	source <(
+	  ui_prompt_macro "Please specify how to resolve the conflict." CONFLICT_DECISION "skip"
+	)
+
+	if [[ $CONFLICT_DECISION == "y" || $CONFLICT_DECISION == "skip" ]]; then
+	  exit 1
+	elif [[ $CONFLICT_DECISION == "clean" ]]; then
+	  # Remove the directory
+	  rm -rf --one-file-system "$FILE"
+	  eval "$CMD"
+	fi
+
+      elif [[ $CONFLICT_MODE == "merge" || $CONFLICT_MODE == "clean" ]]; then
+
+	ui_print_note "Notice: Conflict detected! $FILE already exists."
+	ui_print_note "Using conflict resolution strategy '$CONFLICT_MODE' to create file."
+	rm -rf --one-file-system "$FILE"
+	eval "$CMD"
+
+      fi
+    fi
+  }
 
   local proceed
 
@@ -585,11 +690,13 @@ package() {
 
     # Compress and encrypt the entire account directory
     ui_print_note "Creating the directory archive file..."
-    if [[ ! -e $ACCOUNT_DIR.tar ]]; then
-      tar c "$ACCOUNT_DIR" \
-        | $LIMIT_CMD_FAST \
-        > "$ACCOUNT_DIR.tar"
-    fi
+    local TAR_CMD="tar c '$ACCOUNT_DIR' \
+      | $LIMIT_CMD_FAST \
+      > '$ACCOUNT_DIR.tar'
+    "
+
+    # Execute command
+    package_resolve_conflict "$CONFLICT_MODE" "$ACCOUNT_DIR.tar" "$TAR_CMD"
 
     # Determine whether to do a full archive or incremental
     source <(
@@ -616,45 +723,53 @@ package() {
       yum --assumeyes --enablerepo=epel install rdiff-backup
 
       # If sig exists already, skip generation
+      # Of course, as it stands, this overrides conflict resolution mode.
+      local RDIFF_CMD
       if [[ ! -e $OLD_ARCHIVE.sig ]]; then
         ui_print_note "Generating rdiff signatures..."
-        rdiff signature \
-          $OLD_ARCHIVE \
-          $OLD_ARCHIVE.sig
+        local RDIFF_CMD="rdiff signature \
+          '$OLD_ARCHIVE' \
+          '$OLD_ARCHIVE.sig'
+	"
+	package_resolve_conflict "$CONFLICT_MODE" "$OLD_ARCHIVE.sig" "$RDIFF_CMD"
       fi
 
-      if [[ ! -e $ACCOUNT_DIR.tar.delta ]]; then
-        ui_print_note "Generating rdiff delta..."
-        rdiff delta \
-          $OLD_ARCHIVE.sig \
-          $ACCOUNT_DIR.tar \
-          $ACCOUNT_DIR.tar.delta
-      fi
+      ui_print_note "Generating rdiff delta..."
+
+      RDIFF_CMD="rdiff delta \
+	$OLD_ARCHIVE.sig \
+	$ACCOUNT_DIR.tar \
+	$ACCOUNT_DIR.tar.delta
+      "
+      package_resolve_conflict "$CONFLICT_MODE" "$ACCOUNT_DIR.tar.delta" "$RDIFF_CMD"
 
       compress_file="$ACCOUNT_DIR.tar.delta"
     fi
 
-    if [[ ! -e $compress_file.xz ]]; then
-      ui_print_note "Compressing the archive..."
-      xz -c $compress_file \
-        | $LIMIT_CMD_SLOW \
-        > $compress_file.xz
-    fi
+    ui_print_note "Compressing the archive..."
+    local XZ_CMD="xz -c '$compress_file' \
+      | $LIMIT_CMD_SLOW \
+      > '$compress_file.xz'
+    "
+
+    package_resolve_conflict "$CONFLICT_MODE" "$compress_file.xz" "$XZ_CMD"
 
     ui_print_note "Encrypting the archive..."
-    if [[ ! -e $compress_file.xz.gpg ]]; then
-      cat $compress_file.xz \
+    local GPG_CMD="cat '$compress_file.xz' \
         | gpg --symmetric --batch --passphrase="$ENCRYPTION_KEY" \
         | $LIMIT_CMD_FAST \
-        > $compress_file.xz.gpg
-    fi
+        > '$compress_file.xz.gpg'
+    "
+
+    package_resolve_conflict "$CONFLICT_MODE" "$compress_file.xz.gpg" "$GPG_CMD"
 
     # TODO: Clean up extra files we generated. Confirm first!
+    # - Could depend on conflict resolution mode...dunno
     # 
     #rm -rf "$ACCOUNT"-account{.tar{.xz,},/}
 
     ui_print_note "Account archive generated. Saved to:"
-    ui_print_list "    $compress_file.xz.gpg"
+    ui_print_list <<<"    $compress_file.xz.gpg"
 
   fi
 }
