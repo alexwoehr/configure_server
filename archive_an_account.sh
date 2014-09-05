@@ -49,7 +49,8 @@ source ./setup_vars.sh \
 || (ui_print_note "Cannot find setup_vars.sh. Exiting..." && exit 3)
 
 # Limit Command
-LIMIT_CMD="pv --rate-limit 4M --quiet"
+# TODO: How to rate limit dynamically based on how intensive a specific process is?
+LIMIT_CMD="pv --rate-limit 1M --quiet"
 
 # Facilitate quitting top level script
 trap "exit 99" TERM
