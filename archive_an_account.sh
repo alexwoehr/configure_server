@@ -50,7 +50,9 @@ source ./setup_vars.sh \
 
 # Limit Command
 # TODO: How to rate limit dynamically based on how intensive a specific process is?
-LIMIT_CMD="pv --rate-limit 1M --quiet"
+LIMIT_CMD_BASE="pv --quiet --rate-limit "
+LIMIT_CMD_SLOW="$LIMIT_CMD_BASE 1M"
+LIMIT_CMD_FAST="$LIMIT_CMD_BASE 10M"
 
 # Facilitate quitting top level script
 trap "exit 99" TERM
@@ -558,7 +560,7 @@ package() {
     ui_print_note "Creating the directory archive file..."
     if [[ ! -e $ACCOUNT_DIR.tar ]]; then
       tar c "$ACCOUNT_DIR" \
-        | $LIMIT_CMD \
+        | $LIMIT_CMD_FAST \
         > "$ACCOUNT_DIR.tar"
     fi
 
@@ -607,14 +609,17 @@ package() {
 
     if [[ ! -e $compress_file.xz ]]; then
       ui_print_note "Compressing the archive..."
-      xz -c $compress_file | $LIMIT_CMD > $compress_file.xz
+      xz -c $compress_file \
+        | $LIMIT_CMD_SLOW \
+        > $compress_file.xz
     fi
 
     ui_print_note "Encrypting the archive..."
-    if [[ ! -e $ACCOUNT_DIR.tar.xz.gpg ]]; then
+    if [[ ! -e $compress_file.xz.gpg ]]; then
       cat $compress_file.xz \
         | gpg --symmetric --batch --passphrase="$ENCRYPTION_KEY" \
-        | $LIMIT_CMD > $compress_file.xz.gpg
+        | $LIMIT_CMD_FAST \
+        > $compress_file.xz.gpg
     fi
 
     # TODO: Clean up extra files we generated. Confirm first!
