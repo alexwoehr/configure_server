@@ -553,11 +553,17 @@ package() {
 
     # Compress and encrypt the directory
     ui_print_note "Compressing the directory..."
-    tar c $ACCOUNT_DIR > $ACCOUNT_DIR.tar
+    if [[ ! -e $ACCOUNT_DIR.tar ]]; then
+      tar c $ACCOUNT_DIR > $ACCOUNT_DIR.tar
+    fi
+    if [[ ! -e $ACCOUNT_DIR.tar.xz ]]; then
     xz -c $ACCOUNT_DIR.tar | $LIMIT_CMD > $ACCOUNT_DIR.tar.xz
+    fi
     ui_print_note "Encrypting the archive..."
-    cat ACCOUNT_DIR.tar.xz | gpg --symmetric --batch --passphrase="$ENCRYPTION_KEY" \
+    if [[ ! -e $ACCOUNT_DIR.tar.xz.gpg ]]; then
+    cat $ACCOUNT_DIR.tar.xz | gpg --symmetric --batch --passphrase="$ENCRYPTION_KEY" \
       | $LIMIT_CMD > ACCOUNT_DIR.tar.xz.gpg
+    fi
 
     # TODO: Clean up extra files we generated. Confirm first!
     # 
