@@ -40,7 +40,7 @@ ui_end_task() {
 }
 
 # Function: ui_escape_output
-# Description: Escape output with descriptive header
+# Description: Escape output with descriptive initial header
 
 ui_escape_output() {
   # Pipe stdin into sed and prepend escape
@@ -98,6 +98,16 @@ ui_prompt_macro() {
         # Substitute default value if necessary
         $varname=\${$varname:-$default_value}
         echo "<<< OK, you said \$$varname"
+END_MACRO
+
+}
+
+# Generic read function
+# Slimmed down version of ui_prompt_macro
+ui_read_macro() {
+
+  cat - <<-END_MACRO
+        read "$1"
 END_MACRO
 
 }
