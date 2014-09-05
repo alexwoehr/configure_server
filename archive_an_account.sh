@@ -145,6 +145,8 @@ verify_options_macro() {
       ui_prompt_macro "Please enter directory, or ENTER to default to home? [$(pwd)]" DESTINATION_DIR "$(pwd)"
     )
     ui_print_note "OK, using $DESTINATION_DIR"
+  else
+    DESTINATION_DIR="$2"
   fi
 
   # ENCRYPTION_KEY: for encrypting the archive, at the end
