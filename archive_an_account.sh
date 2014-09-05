@@ -1,4 +1,22 @@
-#!/usr/bin/env bash
+#!/bin/bash -x
+
+# General TODO:
+# - [ ] move into the /var/lib/setup_script directory and version correctly
+# - [ ] needs reporting, prompts
+# - [ ] all functions should allow rate limiting
+# - [ ] handle clobbering
+# - [ ] roll patching function into this file
+# - [ ] implement subcommand oriented approach, similar to github
+# - [ ] add universal long options shared between subcommands
+# HTTPD:
+# - [ ] handle situation where they haven't updated httpd conf paths properly. Remind them to edit conf fil
+# Databases:
+# - [ ] support postgres
+# - [ ] consider adding "--databases --add-drop-database" to mysqldump, if clobber option is set
+# - [ ] when the script tries to grab a database, if there is no database to grab, it will warn the user.
+# - [ ] if there is no database that matches the convention, show the user a list of databases, and allow them to select the database to export.
+
+LIMIT_FUNC="pv --limit 1M"
 
 if [[ -z $1 ]]; then
   echo "No account found."
