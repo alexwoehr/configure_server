@@ -483,9 +483,9 @@ gather_mysql() {
   #### fi
   #### chroot . mysqldump -u root -p --skip-lock-tables smf > ~-/$ACCOUNT-account/mysql/smf.sql
   #### popd
-  local CHROOT=""
+  local CHROOT_CMD=""
   if [[ -e /chroot/mysql ]]; then
-    CHROOT="chroot /chroot/mysql"
+    CHROOT_CMD="chroot /chroot/mysql"
   fi
 
   echo "Please dump mysql and hit enter when you return"
