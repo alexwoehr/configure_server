@@ -342,7 +342,7 @@ gather_apache() {
 
   # Document Root
   # Copy contents of main directory over
-  cp -vrf srv/"$ACCOUNT" "$DESTINATION_DIR"/srv/.
+  cp -vrf srv/"$ACCOUNT"/ "$ACCOUNT_DIR"/srv/.
 
   # Apache Configuration
   # 
@@ -383,8 +383,8 @@ gather_apache() {
 
   # Copy the files
   ui_print_note "Copying files..."
-  cp -vrf /etc/pki/tls/certs/"$ACCOUNT" $ACCOUNT_DIR/tls/certs/.
-  cp -vrf /etc/pki/tls/private/"$ACCOUNT" $ACCOUNT_DIR/tls/private/.
+  cp -vrf /etc/pki/tls/certs/"$ACCOUNT"/ $ACCOUNT_DIR/tls/certs/.
+  cp -vrf /etc/pki/tls/private/"$ACCOUNT"/ $ACCOUNT_DIR/tls/private/.
 
   # End of apache section
   popd
