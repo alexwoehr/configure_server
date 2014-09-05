@@ -35,6 +35,9 @@
 # - [ ] when the script tries to grab a database, if there is no database to grab, it will warn the user.
 # - [ ] if there is no database that matches the convention, show the user a list of databases, and allow them to select the database to export.
 # - [ ] support integrating into my.cnf
+# Packaging:
+# - [ ] warn if any gpg files exist in the account directory
+# - [ ] no options regarding clobbering
 
 ###########################
 #
@@ -84,6 +87,26 @@ main() {
   )
 
   ########################
+  # Mode for Conflict Resolution
+  ui_section "Setup Options: Resolution of Conflicts"
+
+  ui_print_note "There are three possible options for handling conflicts:"
+
+  ui_print_list <<-END_LIST
+	safe: do not create a resource at all if it conflicts with an existing archive or resource.
+	add: only merge directories or add new files, do not overwrite any files. When in doubt, this functions like safe.
+	clobber: any existing files are simply overwritten. However, when merging directories, files omitted from the new archive are not deleted.
+	reinstall: remove any existing resources before installing new resource.
+	END_LIST
+
+  source <(
+    ui_prompt_macro "Which conflict mode? [safe]" CONFLICT_MODE safe
+  )
+  if [[ $CONFLICT_MODE == "y" ]]; then
+    CONFLICT_MODE="safe"
+  fi
+
+  ########################
   # Create skeleton for the account
   ui_section "Create Skeleton"
   source <(
@@ -92,7 +115,7 @@ main() {
   if [[ $proceed != "y" ]]; then
     ui_print_note "OK, skipping..."
   else
-    create_skeleton "$ACCOUNT" "$DESTINATION_DIR"
+    create_skeleton "$ACCOUNT" "$DESTINATION_DIR" "$CONFLICT_MODE"
   fi
 
   ########################
@@ -104,7 +127,7 @@ main() {
   if [[ $proceed != "y" ]]; then
     ui_print_note "OK, skipping..."
   else
-    gather "$ACCOUNT" "$DESTINATION_DIR"
+    gather "$ACCOUNT" "$DESTINATION_DIR" "$CONFLICT_MODE"
   fi
 
   ########################
@@ -116,9 +139,10 @@ main() {
   if [[ $proceed != "y" ]]; then
     ui_print_note "OK, skipping..."
   else
-    package "$ACCOUNT" "$DESTINATION_DIR" "$ENCRYPTION_KEY"
+    package "$ACCOUNT" "$DESTINATION_DIR" "$ENCRYPTION_KEY" "$CONFLICT_MODE"
   fi
 
+  # TODO: conclusion
 }
 
 # verify_options_macro: Verify options.
@@ -197,6 +221,7 @@ END_MACRO
 create_skeleton() {
   local ACCOUNT="$1"
   local DESTINATION_DIR="$2"
+  local CONFLICT_MODE="$3"
 
   source <(
     vars_macro "$ACCOUNT" "$DESTINATION_DIR"
@@ -237,6 +262,7 @@ create_skeleton() {
 # 
 gather() {
   local ACCOUNT="$1"
+  local CONFLICT_MODE="$2"
 
   local proceed
 
@@ -248,7 +274,7 @@ gather() {
   )
   if [[ $proceed == "y" ]]; then
     ui_start_task "Gathering resources for apache"
-    gather_apache "$ACCOUNT" "$DESTINATION_DIR"
+    gather_apache "$ACCOUNT" "$DESTINATION_DIR" "$CONFLICT_MODE"
     ui_end_task "Gathering resources for apache"
   fi
 
@@ -260,7 +286,7 @@ gather() {
   )
   if [[ $proceed == "y" ]]; then
     ui_start_task "Gathering resources for varnish"
-    gather_varnish "$ACCOUNT" "$DESTINATION_DIR"
+    gather_varnish "$ACCOUNT" "$DESTINATION_DIR" "$CONFLICT_MODE"
     ui_end_task "Gathering resources for varnish"
   fi
 
@@ -272,7 +298,7 @@ gather() {
   )
   if [[ $proceed == "y" ]]; then
     ui_start_task "Gathering resources for mysql"
-    gather_mysql "$ACCOUNT" "$DESTINATION_DIR"
+    gather_mysql "$ACCOUNT" "$DESTINATION_DIR" "$CONFLICT_MODE"
     ui_end_task "Gathering resources for mysql"
   fi
 
@@ -284,7 +310,7 @@ gather() {
   )
   if [[ $proceed == "y" ]]; then
     ui_start_task "Gathering log files"
-    gather_logs "$ACCOUNT" "$DESTINATION_DIR"
+    gather_logs "$ACCOUNT" "$DESTINATION_DIR" "$CONFLICT_MODE"
     ui_end_task "Gathering log files"
   fi
 
@@ -299,6 +325,7 @@ gather() {
 gather_apache() {
   ACCOUNT="$1"
   DESTINATION_DIR="$2"
+  CONFLICT_MODE="$3"
 
   source <(
     vars_macro "$ACCOUNT" "$DESTINATION_DIR"
@@ -403,6 +430,7 @@ gather_apache() {
 gather_varnish() {
   ACCOUNT="$1"
   DESTINATION_DIR="$2"
+  CONFLICT_MODE="$3"
 
   source <(
     vars_macro "$ACCOUNT" "$DESTINATION_DIR"
@@ -478,6 +506,7 @@ gather_varnish() {
 gather_mysql() {
   ACCOUNT="$1"
   DESTINATION_DIR="$2"
+  CONFLICT_MODE="$3"
 
   source <(
     vars_macro "$ACCOUNT" "$DESTINATION_DIR"
@@ -536,6 +565,7 @@ package() {
   ACCOUNT="$1"
   DESTINATION_DIR="$2"
   ENCRYPTION_KEY="$3"
+  CONFLICT_MODE="$4"
 
   source <(
     vars_macro "$ACCOUNT" "$DESTINATION_DIR"
