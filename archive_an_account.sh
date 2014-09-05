@@ -49,7 +49,7 @@ source ./setup_vars.sh \
 || (ui_print_note "Cannot find setup_vars.sh. Exiting..." && exit 3)
 
 # Limit Command
-LIMIT_CMD="pv --limit 4M"
+LIMIT_CMD="pv --rate-limit 4M"
 
 # Facilitate quitting top level script
 trap "exit 99" TERM
