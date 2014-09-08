@@ -260,7 +260,7 @@ unpack_archive() {
   local decrypted_file="${ACCOUNT_PKG%.gpg}"
   local GPG_CMD="cat '$ACCOUNT_PKG' \
     | gpg --batch --decrypt --passphrase='$ENCRYPTION_KEY' \
-    | $LIMIT_CMD \
+    | $LIMIT_CMD_FAST \
     > '$decrypted_file'
   "
 
@@ -273,7 +273,7 @@ unpack_archive() {
   # After decompression, loses the .xz extension
   local decompressed_file="${decrypted_file%.xz}"
   UNXZ_CMD="unxz -c '$decrypted_file' \
-    | $LIMIT_CMD \
+    | $LIMIT_CMD_SLOW \
     > '$decompressed_file'
   "
 
