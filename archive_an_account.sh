@@ -455,7 +455,7 @@ gather_apache() {
   # Copy SSL certs, csr's, and keys
   # Look for expected folder for SSL stuff
   ui_print_note "Gathering SSL configuration (/etc/pki/tls)"
-  if [[ -d etc/pki/tls/certs/"$ACCOUNT" && etc/pki/tls/private/"$ACCOUNT" ]]; then
+  if [[ -d etc/pki/tls/certs/"$ACCOUNT" && -d etc/pki/tls/private/"$ACCOUNT" ]]; then
     # Directory exists
     ui_print_note "Found expected SSL files."
   else
@@ -471,8 +471,8 @@ gather_apache() {
 
   # Copy the files
   ui_print_note "Copying tls files..."
-  cp -vrf /etc/pki/tls/certs/"$ACCOUNT"/ $ACCOUNT_DIR/tls/certs/.
-  cp -vrf /etc/pki/tls/private/"$ACCOUNT"/ $ACCOUNT_DIR/tls/private/.
+  cp -vrf etc/pki/tls/certs/"$ACCOUNT"/ $ACCOUNT_DIR/tls/certs/.
+  cp -vrf etc/pki/tls/private/"$ACCOUNT"/ $ACCOUNT_DIR/tls/private/.
 
   # End of apache section
   popd
