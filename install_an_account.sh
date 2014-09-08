@@ -573,7 +573,7 @@ install_archive_mysql() {
       ui_print_note "Enter your mysql root password:"
 
       # Ensure the database is there
-      echo "CREATE DATABASE `$db`;" | $CHROOT_CMD mysql -B -u root -p  2>&1
+      echo "CREATE DATABASE \`$db`\;" | $CHROOT_CMD mysql -B -u root -p  2>&1
 
       # Populate the database
       $CHROOT_CMD mysql -B -u root -p "$db" < "$db_path"
