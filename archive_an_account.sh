@@ -704,6 +704,8 @@ package() {
 
     # Just redefine variable; this is the easiest thing to do.
     local ACCOUNT_DIR="${ACCOUNT_DIR#$DESTINATION_DIR}"
+    # Also remove any remaining initial slashes
+    local ACCOUNT_DIR="${ACCOUNT_DIR##*/}"
 
     local TAR_CMD="tar c '$ACCOUNT_DIR' \
       | $LIMIT_CMD_FAST \
