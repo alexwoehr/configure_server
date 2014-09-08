@@ -23,8 +23,10 @@ source ./setup_vars.sh \
 || (ui_print_note "Cannot find setup_vars.sh. Exiting..." && exit 3)
 
 # Limit Command
-# TODO: How to rate limit dynamically based on how intensive a specific process is?
-LIMIT_CMD="pv --rate-limit 1M --quiet"
+LIMIT_CMD_BASE="pv --quiet --rate-limit "
+LIMIT_CMD_SLOW="$LIMIT_CMD_BASE 1M"
+LIMIT_CMD_FAST="$LIMIT_CMD_BASE 10M"
+
 
 # Facilitate quitting top level script
 trap "exit 99" TERM
@@ -60,6 +62,27 @@ main() {
   )
 
   ########################
+  # Mode for Conflict Resolution
+  ui_section "Setup Options: Resolution of Conflicts"
+
+  ui_print_note "There are three possible options for handling conflicts:"
+
+  ui_print_list <<-END_LIST
+	safe: do not create a resource at all if it conflicts with an existing archive or resource.
+	confirm: confirm what to do
+	add: only merge directories or add new files, do not overwrite any files. When in doubt, this functions like safe.
+	merge: any existing files are simply overwritten. However, when merging directories, files omitted from the new archive are not deleted.
+	clean: remove any existing resources cleanly before installing new resource.
+	END_LIST
+
+  source <(
+    ui_prompt_macro "Which conflict mode? [safe]" CONFLICT_MODE safe
+  )
+  if [[ $CONFLICT_MODE == "y" ]]; then
+    CONFLICT_MODE="safe"
+  fi
+
+  ########################
   # Unpack the file
   source <(
     ui_prompt_macro "Unpack the account file? [y/N]" proceed n
@@ -68,7 +91,7 @@ main() {
     ui_print_note "OK, skipping..."
   else
     ui_start_task "Unpacking"
-    unpack_archive "$ACCOUNT_PKG" "$ENCRYPTION_KEY"
+    unpack_archive "$ACCOUNT_PKG" "$ENCRYPTION_KEY" "$CONFLICT_MODE"
     ui_end_task "Unpacking"
   fi
 
@@ -81,7 +104,7 @@ main() {
     ui_print_note "OK, skipping..."
   else
     ui_start_task "Installing"
-    install_archive "$ACCOUNT_PKG"
+    install_archive "$ACCOUNT_PKG" "$CONFLICT_MODE"
     ui_end_task "Installing"
   fi
 
@@ -166,31 +189,93 @@ END_MACRO
 # Unpacks an encrypted, tarred file into a directory. (If it's a delta, unpacks the delta.)
 # 
 unpack_archive() {
+  # Variables
   local ACCOUNT_PKG="$1"
   local ENCRYPTION_KEY="$2"
+  local CONFLICT_MODE="$3"
 
   source <(
     vars_macro "$ACCOUNT_PKG"
   )
+
+  ####
+  # 
+  # Function to help us resolve file conflicts
+  #
+  # Resolve conflicts for individual files
+  unpack_archive_resolve_conflict() {
+    local CONFLICT_MODE="$1"
+    local FILE="$2"
+    local CMD="$3"
+    local proceed
+
+    if [[ ! -e $FILE ]]; then
+      eval "$CMD"
+    else
+      # File already exists.
+      # 
+      # Need to resolve conflict
+      if [[ $CONFLICT_MODE == "safe" || $CONFLICT_MODE == "add" ]]; then
+	ui_print_note "Warning: Conflict detected! Could not create directory due to conflict: $FILE"
+	# do nothing
+      elif [[ $CONFLICT_MODE == "confirm" ]]; then
+	local CONFLICT_DECISION
+	ui_print_note "Warning: Conflict detected! file '$FILE' already exists!"
+	ui_print_note "CONFIRM MODE. Please confirm how you would like to handle this conflict."
+	ui_print_list <<-END_LIST
+		skip: Take no other action. Skip to next step, using current file.
+		clean: Remove the existing file before proceeding.
+	END_LIST
+	local CONFLICT_DECISION
+	source <(
+	  ui_prompt_macro "Please specify how to resolve the conflict." CONFLICT_DECISION "skip"
+	)
+
+	if [[ $CONFLICT_DECISION == "y" || $CONFLICT_DECISION == "skip" ]]; then
+	  exit 1
+	elif [[ $CONFLICT_DECISION == "clean" ]]; then
+	  # Remove the directory
+	  rm -rf --one-file-system "$FILE"
+	  eval "$CMD"
+	fi
+
+      elif [[ $CONFLICT_MODE == "merge" || $CONFLICT_MODE == "clean" ]]; then
+
+	ui_print_note "Notice: Conflict detected! $FILE already exists."
+	ui_print_note "Using conflict resolution strategy '$CONFLICT_MODE' to create file."
+	rm -rf --one-file-system "$FILE"
+	eval "$CMD"
+
+      fi
+    fi
+  }
+
 
   # Decrypt
   ui_print_note "Decrypting file $ACCOUNT_PKG..."
 
   # After decryption, loses the .gpg extension
   local decrypted_file="${ACCOUNT_PKG%.gpg}"
-  cat "$ACCOUNT_PKG" \
-    | gpg --batch --decrypt --passphrase="$ENCRYPTION_KEY" \
+  local GPG_CMD="cat '$ACCOUNT_PKG' \
+    | gpg --batch --decrypt --passphrase='$ENCRYPTION_KEY' \
     | $LIMIT_CMD \
-    > "$decrypted_file"
+    > '$decrypted_file'
+  "
+
+  # Run command
+  unpack_archive_resolve_conflict "$CONFLICT_MODE" "$GPG_CMD" "$decrypted_file"
   
   ui_print_note "OK, decrypted file."
   ui_print_note "Decompressing file $decrypted_file..."
 
   # After decompression, loses the .xz extension
   local decompressed_file="${decrypted_file%.xz}"
-  unxz -c "$decrypted_file" \
+  UNXZ_CMD="unxz -c '$decrypted_file' \
     | $LIMIT_CMD \
-    > $decompressed_file
+    > '$decompressed_file'
+  "
+
+  unpack_archive_resolve_conflict "$CONFLICT_MODE" "$UNXZ_CMD" "$decompressed_file"
 
   local is_delta
   source <(
@@ -210,12 +295,17 @@ unpack_archive() {
     ui_print_note "Installing dependencies as necessary..."
     yum --assumeyes --enablerepo=epel install rdiff-backup
 
-    ui_print_note "Patching based on deltas..."
+    ui_start_task "Patching based on deltas..."
 
-    rdiff patch \
-      "$OLD_ARCHIVE" \
-      "$OLD_ARCHIVE_SIGS" \
-      "$ACCOUNT_DIR.tar"
+    local RDIFF_CMD="rdiff patch \
+      '$OLD_ARCHIVE' \
+      '$decompressed_file' \
+      '$ACCOUNT_DIR.tar'
+    "
+
+    unpack_archive_resolve_conflict "$CONFLICT_MODE" "$RDIFF_CMD" "$ACCOUNT_DIR.tar"
+
+    ui_end_task "Patching based on deltas..."
 
   fi
 
@@ -223,7 +313,10 @@ unpack_archive() {
 
   # Expand tar archive into directory
   ui_print_note "Expanding into the account directory..."
-  tar xf "$ACCOUNT_DIR.tar"
+  pushd "$SOURCE_DIR"
+  local TAR_CMD="tar xf '$ACCOUNT_DIR.tar'"
+  unpack_archive_resolve_conflict "$CONFLICT_MODE" "$TAR_CMD" "$ACCOUNT_DIR"
+  popd "$SOURCE_DIR"
 
   ui_print_note "Done unpacking archive"
 
@@ -237,6 +330,7 @@ unpack_archive() {
 # 
 install_archive() {
   local ACCOUNT_PKG="$1"
+  local CONFLICT_MODE="$2"
   local proceed
 
   source <(
@@ -251,7 +345,7 @@ install_archive() {
   )
   if [[ $proceed == "y" ]]; then
     ui_start_task "Installing resources for apache"
-    install_archive_apache "$ACCOUNT_PKG"
+    install_archive_apache "$ACCOUNT_PKG" "$CONFLICT_MODE"
     ui_end_task "Installing resources for apache"
   fi
 
@@ -263,7 +357,7 @@ install_archive() {
   )
   if [[ $proceed == "y" ]]; then
     ui_start_task "Installing resources for varnish"
-    install_archive_varnish "$ACCOUNT_PKG"
+    install_archive_varnish "$ACCOUNT_PKG" "$CONFLICT_MODE"
     ui_end_task "Installing resources for varnish"
   fi
 
@@ -275,7 +369,7 @@ install_archive() {
   )
   if [[ $proceed == "y" ]]; then
     ui_start_task "Installing resources for mysql"
-    install_archive_mysql "$ACCOUNT_PKG"
+    install_archive_mysql "$ACCOUNT_PKG" "$CONFLICT_MODE"
     ui_end_task "Installing resources for mysql"
   fi
 
@@ -287,6 +381,7 @@ install_archive() {
 #
 install_archive_apache() {
   local ACCOUNT_PKG="$1"
+  local CONFLICT_MODE="$2"
 
   source <(
     vars_macro "$ACCOUNT_PKG"
@@ -332,15 +427,27 @@ install_archive_apache() {
   # Use root we decided on
   pushd "$APACHE_ROOT"
 
-  # Merge into apache's docroot
-  cp -rf "$ACCOUNT_DIR"/srv/* srv/.
+  # Currently conflict resolution is based on directories; interactive confirm per file is not supported.
+  # TODO: could support interactive.
 
-  # Merge configuration
-  cp -vrf "$ACCOUNT_DIR"/httpd/* etc/httpd/.
-  cp -vrf "$ACCOUNT_DIR"/tls/* etc/pki/tls/.
-  cp -vrf "$ACCOUNT_DIR"/varnish/* etc/varnish/.
+  # Install into apache's docroot
+  local CP_CMD="cp -r '$ACCOUNT_DIR'/srv/'$ACCOUNT'/* srv/'$ACCOUNT'/."
+  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" srv/"$ACCOUNT"/.
 
-  # Leave apache chroot, if applicable
+  # Install configuration
+  mkdir --parents etc/httpd/"$ACCOUNT"/
+  CP_CMD="cp -rv '$ACCOUNT_DIR'/httpd/sites/$ACCOUNT/* etc/httpd/sites/'$ACCOUNT'/."
+  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/httpd/sites/"$ACCOUNT"/.
+
+  mkdir --parents etc/pki/tls/certs/"$ACCOUNT"/
+  CP_CMD="cp -rv '$ACCOUNT_DIR'/tls/certs/'$ACCOUNT'/* etc/pki/tls/certs/'$ACCOUNT'/."
+  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/pki/tls/certs/"$ACCOUNT"/.
+
+  mkdir --parents etc/pki/tls/private/"$ACCOUNT"/
+  CP_CMD="cp -rv '$ACCOUNT_DIR'/tls/private/'$ACCOUNT'/* etc/pki/tls/private/'$ACCOUNT'/."
+  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/pki/tls/private/"$ACCOUNT"/
+
+  # Leave apache chroot
   popd
 
 }
@@ -385,7 +492,13 @@ install_archive_varnish() {
     )
   fi
 
-  cp -vrf $ACCOUNT_DIR/varnish/* etc/varnish/.
+  pushd "$VARNISH_ROOT"
+
+  mkdir --parents etc/varnish/"$ACCOUNT"/.
+  CP_CMD="cp -rv '$ACCOUNT_DIR'/varnish/* etc/varnish/'$ACCOUNT'/."
+  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/varnish/"$ACCOUNT"/.
+
+  popd
 
 }
 
@@ -443,6 +556,8 @@ install_archive_mysql() {
     local db_filename="${db_filepath##*/}"
     local db="${db_filename%.*}"
 
+    # Determine how to proceed based on conflict mode.
+
     # Create the database
     source <(
       ui_prompt_macro "Okay to create mysql database $db from file $db_filename?" proceed n
@@ -469,6 +584,91 @@ install_archive_mysql() {
   # Leave mysql chroot
   popd
 
+}
+
+# Helper function: resolve conflicts for installers
+# Assumes first character of CMD is a herestring.
+install_archive_resolve_conflict() {
+  local CONFLICT_MODE="$1"
+  local DIR="$2"
+  local CMD="$3"
+  local proceed
+
+  if [[ ! -e $DIR ]]; then
+    eval "$CMD"
+  else
+    # Need to resolve conflict
+    if [[ $CONFLICT_MODE == "safe" ]]; then
+      ui_print_note "Warning: Conflict detected! Could not create directory due to conflict: $DIR"
+      # do nothing
+    elif [[ $CONFLICT_MODE == "confirm" ]]; then
+      local CONFLICT_DECISION
+      ui_print_note "Warning: Conflict detected! directory '$DIR' already exists!"
+      ui_print_note "CONFIRM MODE. Please confirm how you would like to handle this conflict."
+      ui_print_list <<-END_LIST
+              skip: Take no other action. Skip to next step, using current directory.
+              add: Add any new files but skip existing files. When in doubt, this behaves like skip.
+              merge: Overwrite files, add new files. Files not in the archive are left alone
+              clean: Remove the existing directory before proceeding.
+      END_LIST
+      local CONFLICT_DECISION
+      source <(
+        ui_prompt_macro "Please specify how to resolve the conflict." CONFLICT_DECISION "skip"
+      )
+
+      if [[ $CONFLICT_DECISION == "y" || $CONFLICT_DECISION == "skip" ]]; then
+        exit 1
+      elif [[ $CONFLICT_DECISION == "add" ]]; then
+        # Copy files in, but instruct CP not to clobber
+        # We have to do some surgery on cp...this isn't really safe. <<< is a here-string.
+        CMD="$(
+          <<<"$CMD" sed 's/^cp /cp --no-clobber /'
+        )"
+        eval "$CMD"
+      elif [[ $CONFLICT_DECISION == "merge" ]]; then
+        # Copy files in. Instruct CP to clobber
+        # We have to do some surgery on cp...this isn't really safe. <<< is a here-string.
+        CMD="$(
+          <<<"$CMD" sed 's/^cp /cp --force /'
+        )"
+        eval "$CMD"
+      elif [[ $CONFLICT_DECISION == "clean" ]]; then
+        # Remove the directory completely first
+        rm -rf --one-file-system "$DIR"
+        eval "$CMD"
+      fi
+
+    elif [[ $CONFLICT_MODE == "add" ]]; then
+
+      ui_print_note "Warning: Conflict detected! directory '$DIR' already exists!"
+      ui_print_note "ADD MODE. Adding new files without modifying existing ones."
+      # Copy files in, but instruct CP not to clobber
+      # We have to do some surgery on cp...this isn't really safe. <<< is a here-string.
+      CMD="$(
+        <<<"$CMD" sed 's/^cp /cp --no-clobber /'
+      )"
+      eval "$CMD"
+
+    elif [[ $CONFLICT_MODE == "merge" ]]; then
+
+      ui_print_note "Warning: Conflict detected! directory '$DIR' already exists!"
+      ui_print_note "MERGE MODE. Overwriting existing files without removing any files not in the new archive."
+      # Copy files in. Instruct CP to clobber
+      # We have to do some surgery on cp...this isn't really safe. <<< is a here-string.
+      CMD="$(
+        <<<"$CMD" sed 's/^cp /cp --force /'
+      )"
+      eval "$CMD"
+
+    elif [[ $CONFLICT_MODE == "clean" ]]; then
+
+      ui_print_note "Notice: Conflict detected! $DIR already exists."
+      ui_print_note "Using conflict resolution strategy '$CONFLICT_MODE' so deleting directory tree before adding new files."
+      rm -rf --one-file-system "$DIR"
+      eval "$CMD"
+
+    fi
+  fi
 }
 
 ###########################
