@@ -606,11 +606,11 @@ install_archive_resolve_conflict() {
       ui_print_note "Warning: Conflict detected! directory '$DIR' already exists!"
       ui_print_note "CONFIRM MODE. Please confirm how you would like to handle this conflict."
       ui_print_list <<-END_LIST
-              skip: Take no other action. Skip to next step, using current directory.
-              add: Add any new files but skip existing files. When in doubt, this behaves like skip.
-              merge: Overwrite files, add new files. Files not in the archive are left alone
-              clean: Remove the existing directory before proceeding.
-      END_LIST
+		skip: Take no other action. Skip to next step, using current directory.
+		add: Add any new files but skip existing files. When in doubt, this behaves like skip.
+		merge: Overwrite files, add new files. Files not in the archive are left alone
+		clean: Remove the existing directory before proceeding.
+	END_LIST
       local CONFLICT_DECISION
       source <(
         ui_prompt_macro "Please specify how to resolve the conflict." CONFLICT_DECISION "skip"
