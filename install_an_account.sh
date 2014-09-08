@@ -144,7 +144,7 @@ verify_options_macro() {
 
   # Pass back variables
   cat <<END_MACRO
-    ACCOUNT_PKG="$ACCOUNT"
+    ACCOUNT_PKG="$ACCOUNT_PKG"
     ENCRYPTION_KEY="$ENCRYPTION_KEY"
 END_MACRO
 
