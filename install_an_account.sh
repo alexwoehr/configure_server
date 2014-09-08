@@ -592,8 +592,8 @@ install_archive_mysql() {
 # Assumes first character of CMD is a herestring.
 install_archive_resolve_conflict() {
   local CONFLICT_MODE="$1"
-  local DIR="$2"
-  local CMD="$3"
+  local CMD="$2"
+  local DIR="$3"
   local proceed
 
   if [[ ! -e $DIR ]]; then
