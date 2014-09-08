@@ -207,8 +207,8 @@ unpack_archive() {
   # Resolve conflicts for individual files
   unpack_archive_resolve_conflict() {
     local CONFLICT_MODE="$1"
-    local FILE="$2"
-    local CMD="$3"
+    local CMD="$2"
+    local FILE="$3"
     local proceed
 
     if [[ ! -e $FILE ]]; then
