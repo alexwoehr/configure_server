@@ -163,6 +163,8 @@ vars_macro() {
   local ACCOUNT_PKG_FILENAME="${ACCOUNT_PKG##*/}";
   # Remove extensions
   local ACCOUNT="${ACCOUNT_PKG_FILENAME%%.*}";
+  # Remove suffix, if it's there
+  local ACCOUNT="${ACCOUNT%-account}";
 
   # Get source directory
   # Remove the filename (including extensions)
