@@ -168,7 +168,7 @@ vars_macro() {
 
   # Get source directory
   # Remove the filename (including extensions)
-  local SOURCE_DIR="${ACCOUNT_PKG#$ACCOUNT_PKG_FILENAME}"
+  local SOURCE_DIR="${ACCOUNT_PKG%/*}"
 
   # Get unpacked archive directory
   # Remove the filename (including extensions)
