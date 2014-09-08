@@ -699,6 +699,12 @@ package() {
 
     # Compress and encrypt the entire account directory
     ui_print_note "Creating the directory archive file..."
+
+    pushd "$DESTINATION_DIR"
+
+    # Just redefine variable; this is the easiest thing to do.
+    local ACCOUNT_DIR="${ACCOUNT_DIR#$DESTINATION_DIR}"
+
     local TAR_CMD="tar c '$ACCOUNT_DIR' \
       | $LIMIT_CMD_FAST \
       > '$ACCOUNT_DIR.tar'
@@ -792,6 +798,8 @@ package() {
       rm -rf --one-file-system $compress_file.xz
       # of course, don't remove the gpg!
     fi
+
+    popd
 
     ui_print_note "Account archive generated. Saved to:"
     ui_print_list <<<"    $compress_file.xz.gpg"
