@@ -238,6 +238,11 @@ unpack_archive() {
 	elif [[ $CONFLICT_DECISION == "clean" ]]; then
 	  # Remove the directory
 	  rm -rf --one-file-system "$FILE"
+	  # If it's a directory, we might need to recreate it for $CMD to work
+	  if [[ -d "$FILE" ]]; then
+	    mkdir --parents "$FILE"
+	  fi
+	  # Run the $CMD
 	  eval "$CMD"
 	fi
 
@@ -246,6 +251,11 @@ unpack_archive() {
 	ui_print_note "Notice: Conflict detected! $FILE already exists."
 	ui_print_note "Using conflict resolution strategy '$CONFLICT_MODE' to create file."
 	rm -rf --one-file-system "$FILE"
+	# If it's a directory, we might need to recreate it for $CMD to work
+	if [[ -d "$FILE" ]]; then
+	  mkdir --parents "$FILE"
+	fi
+	# Run the $CMD
 	eval "$CMD"
 
       fi
@@ -633,7 +643,7 @@ install_archive_resolve_conflict() {
       elif [[ $CONFLICT_DECISION == "clean" ]]; then
         # Remove the directory completely first
         rm -rf --one-file-system "$DIR"
-	# of course, they probably still need it there
+	# of course, the $CMD probably still needs it there
 	mkdir --parents "$DIR"
 	# run the command itself
         eval "$CMD"
@@ -666,7 +676,7 @@ install_archive_resolve_conflict() {
       ui_print_note "Notice: Conflict detected! $DIR already exists."
       ui_print_note "Using conflict resolution strategy '$CONFLICT_MODE' so deleting directory tree before adding new files."
       rm -rf --one-file-system "$DIR"
-      # of course, they probably still need the DIR there
+      # of course, the $CMD probably still needs the DIR there
       mkdir --parents "$DIR"
       # run the command itself
       eval "$CMD"
