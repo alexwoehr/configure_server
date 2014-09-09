@@ -633,6 +633,9 @@ install_archive_resolve_conflict() {
       elif [[ $CONFLICT_DECISION == "clean" ]]; then
         # Remove the directory completely first
         rm -rf --one-file-system "$DIR"
+	# of course, they probably still need it there
+	mkdir --parents "$DIR"
+	# run the command itself
         eval "$CMD"
       fi
 
@@ -663,6 +666,9 @@ install_archive_resolve_conflict() {
       ui_print_note "Notice: Conflict detected! $DIR already exists."
       ui_print_note "Using conflict resolution strategy '$CONFLICT_MODE' so deleting directory tree before adding new files."
       rm -rf --one-file-system "$DIR"
+      # of course, they probably still need the DIR there
+      mkdir --parents "$DIR"
+      # run the command itself
       eval "$CMD"
 
     fi
