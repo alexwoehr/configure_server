@@ -389,11 +389,6 @@ install_archive_apache() {
     vars_macro "$ACCOUNT_PKG"
   )
 
-  # Decrypt
-  ui_print_note "Decrypting file $ACCOUNT_PKG..."
-
-  # TODO: check if there's an existing account before clobbering
-
   local proceed
   local APACHE_ROOT
 
