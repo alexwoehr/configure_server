@@ -443,7 +443,7 @@ install_archive_apache() {
   install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" srv/"$ACCOUNT"/
 
   # Install configuration
-  mkdir --parents etc/httpd/"$ACCOUNT"/
+  mkdir --parents etc/httpd/sites/"$ACCOUNT"/
   CP_CMD="cp -rv '$ACCOUNT_DIR'/httpd/sites/$ACCOUNT/* etc/httpd/sites/'$ACCOUNT'/"
   install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/httpd/sites/"$ACCOUNT"/
 
