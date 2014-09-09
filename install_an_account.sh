@@ -428,6 +428,7 @@ install_archive_apache() {
   # TODO: could support interactive.
 
   # Install into apache's docroot
+  mkdir --parents srv/"$ACCOUNT"/
   local CP_CMD="cp -r '$ACCOUNT_DIR'/srv/'$ACCOUNT'/* srv/'$ACCOUNT'/"
   install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" srv/"$ACCOUNT"/
 
