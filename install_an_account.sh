@@ -434,16 +434,16 @@ install_archive_apache() {
 
   # Install into apache's docroot
   local CP_CMD="cp -r '$ACCOUNT_DIR'/srv/'$ACCOUNT'/* srv/'$ACCOUNT'/."
-  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" srv/"$ACCOUNT"/.
+  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" srv/"$ACCOUNT"/
 
   # Install configuration
   mkdir --parents etc/httpd/"$ACCOUNT"/
   CP_CMD="cp -rv '$ACCOUNT_DIR'/httpd/sites/$ACCOUNT/* etc/httpd/sites/'$ACCOUNT'/."
-  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/httpd/sites/"$ACCOUNT"/.
+  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/httpd/sites/"$ACCOUNT"/
 
   mkdir --parents etc/pki/tls/certs/"$ACCOUNT"/
   CP_CMD="cp -rv '$ACCOUNT_DIR'/tls/certs/'$ACCOUNT'/* etc/pki/tls/certs/'$ACCOUNT'/."
-  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/pki/tls/certs/"$ACCOUNT"/.
+  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/pki/tls/certs/"$ACCOUNT"/
 
   mkdir --parents etc/pki/tls/private/"$ACCOUNT"/
   CP_CMD="cp -rv '$ACCOUNT_DIR'/tls/private/'$ACCOUNT'/* etc/pki/tls/private/'$ACCOUNT'/."
@@ -496,9 +496,9 @@ install_archive_varnish() {
 
   pushd "$VARNISH_ROOT"
 
-  mkdir --parents etc/varnish/"$ACCOUNT"/.
+  mkdir --parents etc/varnish/"$ACCOUNT"/
   CP_CMD="cp -rv '$ACCOUNT_DIR'/varnish/* etc/varnish/'$ACCOUNT'/."
-  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/varnish/"$ACCOUNT"/.
+  install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" etc/varnish/"$ACCOUNT"/
 
   popd
 
