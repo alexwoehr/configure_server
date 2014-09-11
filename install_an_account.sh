@@ -558,8 +558,13 @@ install_archive_mysql() {
   ui_press_any_key
 
   local db_filepath
-  for db_filepath in $ACCOUNT_DIR/mysql/*.sql; do
+  for db_filepath in $(find "$ACCOUNT_DIR"/mysql -type f -name '*.sql'); do
 
+    # This if statement makes sure the file exists.
+    # It is mostly for times when there are no files found (*.sql)
+    if [[ ! -e $db_filepath ]]; then
+      continue
+    fi
     # Get db name
     local db_filename="${db_filepath##*/}"
     local db="${db_filename%.*}"
