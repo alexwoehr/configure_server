@@ -410,7 +410,7 @@ install_archive_apache() {
   # Check for existence of standard chroot
   if [[ -e "/chroot/apache" ]]; then
     source <(
-      ui_prompt_macro "Found apache chroot. Use it to gather apache resources? [Y/n]" proceed y
+      ui_prompt_macro "Found apache chroot. Use it when distributing apache resources? [Y/n]" proceed y
     )
 
     if [[ $proceed == "y" ]]; then
@@ -484,7 +484,7 @@ install_archive_varnish() {
   # Check for existence of standard chroot
   if [[ -e "/chroot/varnish" ]]; then
     source <(
-      ui_prompt_macro "Found varnish chroot. Use it to gather varnish resources? [Y/n]" proceed y
+      ui_prompt_macro "Found varnish chroot. Use it when distributing varnish resources? [Y/n]" proceed y
     )
 
     if [[ $proceed == "y" ]]; then
@@ -534,7 +534,7 @@ install_archive_mysql() {
   # Check for existence of standard chroot
   if [[ -e "/chroot/mysql" ]]; then
     source <(
-      ui_prompt_macro "Found mysql chroot. Use it to gather mysql resources? [Y/n]" proceed y
+      ui_prompt_macro "Found mysql chroot. Use it when distributing mysql resources? [Y/n]" proceed y
     )
 
     if [[ $proceed == "y" ]]; then
