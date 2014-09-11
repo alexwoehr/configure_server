@@ -326,7 +326,7 @@ unpack_archive() {
   # Expand tar archive into directory
   ui_print_note "Expanding into the account directory..."
   pushd "$SOURCE_DIR"
-  local TAR_CMD="tar xf '$ACCOUNT_DIR.tar'"
+  local TAR_CMD="cat '$ACCOUNT_DIR.tar' | $LIMIT_CMD_FAST | tar x"
   unpack_archive_resolve_conflict "$CONFLICT_MODE" "$TAR_CMD" "$ACCOUNT_DIR"
   popd "$SOURCE_DIR"
 
