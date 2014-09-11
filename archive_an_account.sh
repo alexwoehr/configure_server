@@ -593,7 +593,7 @@ gather_mysql() {
 To show databases use something like:
     echo 'SHOW DATABASES;' | $CHROOT_CMD mysql -B -u root -p
 To dump databases use something like:
-    $CHROOT_CMD mysqldump -u root -p --skip-lock-tables ${ACCOUNT}_wordpress > $ACCOUNT_DIR/mysql/${ACCOUNT}_wordpress.sql
+    $CHROOT_CMD mysqldump -u root -p --skip-lock-tables --databases --add-drop-database ${ACCOUNT}_www_live_wp > $ACCOUNT_DIR/mysql/${ACCOUNT}/${ACCOUNT}_www_live_wp.sql
 END_CAT
 
   read proceed
