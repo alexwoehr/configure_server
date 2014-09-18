@@ -310,6 +310,9 @@ create_skeleton() {
 
   # MySQL
   create_skeleton_dir "$CONFLICT_MODE" "$ACCOUNT_DIR"/mysql/"$ACCOUNT"/
+
+  # Postgresql
+  create_skeleton_dir "$CONFLICT_MODE" "$ACCOUNT_DIR"/postgresql/"$ACCOUNT"/
 }
 
 ###########################
@@ -358,6 +361,18 @@ gather() {
     ui_start_task "Gathering resources for mysql"
     gather_mysql "$ACCOUNT" "$DESTINATION_DIR" "$CONFLICT_MODE"
     ui_end_task "Gathering resources for mysql"
+  fi
+
+  ################
+  # postgresql
+  #
+  source <(
+    ui_prompt_macro "Gather resources for postgresql (databases)? [Y/n]" proceed y
+  )
+  if [[ $proceed == "y" ]]; then
+    ui_start_task "Gathering resources for postgresql"
+    gather_postgresql "$ACCOUNT" "$DESTINATION_DIR" "$CONFLICT_MODE"
+    ui_end_task "Gathering resources for postgresql"
   fi
 
   ################
@@ -593,7 +608,7 @@ gather_mysql() {
 To show databases use something like:
     echo 'SHOW DATABASES;' | $CHROOT_CMD mysql -B -u root -p
 To dump databases use something like:
-    $CHROOT_CMD mysqldump -u root -p --skip-lock-tables --databases --add-drop-database ${ACCOUNT}_www_live_wp > $ACCOUNT_DIR/mysql/${ACCOUNT}/${ACCOUNT}_www_live_wp.sql
+    $CHROOT_CMD mysqldump -u root -p --skip-lock-tables --databases --add-drop-database ${ACCOUNT}_www_live_wp > $ACCOUNT_DIR/mysql/${ACCOUNT}/${ACCOUNT}_www_live_wp.my.sql
 END_CAT
 
   read proceed
@@ -603,6 +618,65 @@ END_CAT
     ui_print_note "WARNING! mysql directory is empty. No databases will be created. Strike enter to really continue."
     ui_press_any_key
   fi
+}
+
+###########################
+#
+# Gather Postgresql Resources
+#
+# Gather databases for postgresql.
+# 
+gather_postgresql() {
+  ACCOUNT="$1"
+  DESTINATION_DIR="$2"
+  CONFLICT_MODE="$3"
+
+  source <(
+    vars_macro "$ACCOUNT" "$DESTINATION_DIR"
+  )
+
+  local proceed
+
+  # TODO: dump postgresql tables, copy over varnish configuration
+  #### Dump and save postgresql tables
+  # Use chroot if available
+  #### if [[ -e /chroot/postgresql ]]; then
+  ####   pushd /chroot/postgresql
+  #### else
+  ####   pushd /
+  #### fi
+  #### chroot . mysqldump -u root -p --skip-lock-tables smf > ~-/$ACCOUNT-account/mysql/smf.sql
+  #### popd
+  local CHROOT_CMD=""
+
+  if [[ -e /chroot/postgresql ]]; then
+    CHROOT_CMD="chroot /chroot/postgresql"
+  fi
+
+  cat <<END_CAT
+  Please dump postgresql and hit enter when you return
+To show databases use something like:
+    $CHROOT_CMD psql --list --username=postgres | awk '/^ ${ACCOUNT}_/ { print $1 }'
+To dump databases use something like:
+    $CHROOT_CMD PGDATABASE=cocoon_prod pg_dump \
+      --username=postgres \
+      --clean \
+      --no-owner \
+      --no-privileges \
+      --inserts \
+      --column-inserts \
+      --password \
+      --file=${ACCOUNT}_www_live_wp.pg.sql
+END_CAT
+
+  read proceed
+
+  # Check if any files were added
+  # not necessary for postgres since hardly any accounts use it
+  ####    if [[ -z "$(ls -d "$ACCOUNT_DIR"/postgresql)" ]]; then
+  ####      ui_print_note "WARNING! postgresql directory is empty. No databases will be created. Strike enter to really continue."
+  ####      ui_press_any_key
+  ####    fi
 }
 
 ###########################
