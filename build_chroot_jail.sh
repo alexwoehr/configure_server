@@ -43,10 +43,15 @@ readonly CHROOT_GROUP=chroot_group
 readonly PACKAGES="rpm-build yum initscripts"
 
 ui_start_task "Dependencies"
+
 yum --assumeyes install e2fsprogs
+
 ui_end_task "Dependencies"
 
 ui_start_task "Create chroot loop partition"
+
+ui_print_note "Creating Loops directory..."
+mkdir --parents "$CHROOT_JAIL_DIR"/Loops
 
 if [[ -e "$CHROOT_LOOP_FILE" ]]; then
   ui_print_note "Partition was detected. Nothing to do."
@@ -231,6 +236,6 @@ ui_print_note "Setup is finished."
 ui_print_note "Now you should be able to chroot into the new system and complete any remaining setup by using the following command:"
 
 cat <<END_COMMAND
-  cd "$CHROOT_JAIL_DIR" && chroot "$CHROOT_JAIL_DIR" su "$CHROOT_USER" "$(which bash)" --login
+  cd "$CHROOT_JAIL_DIR" && chroot "$CHROOT_JAIL_DIR" su "$CHROOT_USER" -c "$(which bash) --login"
 END_COMMAND
 
