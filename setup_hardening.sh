@@ -2090,7 +2090,7 @@ else
     ui_prompt_macro "Disable bluetooth modules in kernel? [y/N]" proceed n
   )
 
-  if [ "$proceed" != "y"]; then
+  if [ "$proceed" != "y" ]; then
     ui_print_note "OK, no action taken."
   else
     # Save old file
