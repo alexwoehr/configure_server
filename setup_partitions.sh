@@ -277,7 +277,7 @@ if [ "$proceed" == "y" ]; then
   echo "OK, displaying new fstab below:"
   echo "-- press any key to continue --"
   read proceed
-  cat $modfile | sed "s/.*/[$modfile] \0/"
+  cat $modfile | sed 's/.*/'"[$modfile]"' \0/'
   cp $modfile $modfile.save-after_setup-`date +%F`
   >> $UNDO_FILE echo "echo 'Undoing fstab additions...' "
   >> $UNDO_FILE echo "sed --in-place '/^# $modflag/,+10000d' '$modfile'"
