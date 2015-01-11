@@ -290,12 +290,6 @@ fi
 echo "------------------------------"
 echo "-- Conclusion"
 echo "------------------------------"
-echo "- Actions Taken: $ACTIONS_COUNTER "
-echo "- Actions Log: Press any key..."
-read proceed
-cat "$ACTIONS_TAKEN_FILE" | nl | sed 's/.*/* \0/'
-echo "- END OF ACTIONS TAKEN FILE"
-echo
-echo "Please see $UNDO_FILE for ability to revert most of the changes we have made."
+echo "- Partitioning finished."
 
 exit 0
