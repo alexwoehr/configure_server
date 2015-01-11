@@ -1,5 +1,29 @@
 #!/bin/bash
 
+# TODO:
+# - sshd:
+#   - PasswordAuthentication no
+#   - Need to restart server -- this is iffy. Walk them through it.
+# - finish integrating this: http://www.cyberciti.biz/faq/redhat-centos-disable-ipv6-networking/
+# - check for no owner files: #15.2 on http://www.cyberciti.biz/tips/linux-security.html
+# - check back against NSA guidelines. We might have missed a few points.
+# - #17.1: Monitor Suspicious Log Messages With Logwatch / Logcheck
+# - #17.2: System Accounting with auditd
+# - AIDE
+# - backups
+# - setup scripts for automatically emailing diagnositics:
+#   > backup
+#   > AIDE scan
+#   > UI
+# - brief mode, to show only offending files but skip most ceremony, so every day we can execute 'yes n | setup_hardening.sh ' and email the result
+# - search and remove DS_STORE files:
+#   - cf http://www.intego.com/mac-security-blog/possible-security-issue-involving-ds_store-files-on-web-servers/
+# - search and remove DS_STORE files:
+#   - cf http://www.intego.com/mac-security-blog/possible-security-issue-involving-ds_store-files-on-web-servers/
+# - should we install phpMyAdmin or something of that nature? Here or in install_mysql_chroot?
+# - lock root
+# - encourage creation of separate users besides ec2-user (warn if there's an ec2-user, etc)
+
 source ./ui.inc
 source ./functions.inc
 
@@ -1717,6 +1741,9 @@ source <(
 if [ "$proceed" != "y" ]; then
   ui_print_note "OK, no changes made."
 else
+  ui_print_note "Installing ipset..."
+  yum --assumeyes install ipset | ui_escape_output "yum"
+
   source <(
     fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
   )
@@ -1892,6 +1919,8 @@ install sctp /bin/true
 install rds /bin/true
 # $modflag
 install tipc /bin/true
+# $modflag
+install ipv6 /bin/true
 END_FLAGS
 
     modfile_saveAfter_callback
@@ -2055,7 +2084,7 @@ modfile="/etc/modprobe.d/configure_server.exclusions.modprobe.conf"
 modflag="configure_server directive 3.3.14.3"
 
 if [ 0 '<' `grep "$modflag"$ "$modfile" | wc -l` ]; then
-  ui_print_note "OK, nothing to do."
+  ui_print_note "Changes made already. OK, nothing to do."
 else
   source <(
     ui_prompt_macro "Disable bluetooth modules in kernel? [y/N]" proceed n
@@ -2103,7 +2132,7 @@ source <(
 )
 
 if [ "$proceed" != "y" ]; then
-  ui_print_note "Ok, skipping."
+  ui_print_note "Ok, skipping permissions fixes."
 else
   ui_print_note "Ok, fixing permissions. (Note there may be errors from missing files or directories.)"
   chown root:root /etc/crontab
@@ -2123,8 +2152,7 @@ fi
 # NSA ??? Cron allow, deny
 ui_section "Cron allow, deny"
 echo "You must manually make any changes to cron.allow/deny. Press ^Z now if you wish, then hit enter when you come back."
-echo "-- press any key to continue --"
-read proceed
+ui_press_any_key
 
 
 # NSA 3.5.2 SSHD Configuration
@@ -2151,7 +2179,7 @@ else
 # $modflag
 Protocol 2
 # $modflag
-allowgroups humans
+AllowGroups humans
 # $modflag
 IgnoreRhosts yes
 # $modflag
@@ -2235,8 +2263,8 @@ else
         fn_backup_config_file_macro "$modfile" modfile_saveAfter_callback
       )
 
-      >> $modfile echo "# $modflag"
-      >> $modfile echo "DAEMON=no"
+      >> "$modfile" echo "# $modflag"
+      >> "$modfile" echo "DAEMON=no"
       
       modfile_saveAfter_callback
 
@@ -2252,7 +2280,7 @@ else
 fi
 
 # NSA 3.15A VSFTP installation
-ui_section "FTP configuration (vsftpd)"
+ui_section "FTP: Install vsftpd"
 
 modfile=""
 modflag="configure_server directive 3.15A"
@@ -2288,78 +2316,133 @@ fi
 
 # TODO: Actually just append the sample file to the end of default configuration.
 # # NSA 3.15B FTP Server Configuration
-# modflag="configure_server directive 3.15B FTP Server"
-# modfile="/etc/vsftpd/vsftpd.conf"
-# >> $modfile echo 
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "anonymous_enable=NO"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "log_ftp_protocol=YES"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "ftpd_banner=Greetings."
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "chown_uploads=YES"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "chown_username=apache"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "local_enable=YES"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "chroot_local_user=YES"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "userlist_enable=YES"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "userlist_file=/etc/vsftpd/user_list"
-# # TODO: ensure that right IP is used!
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "pasv_address=54.84.7.7"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "pasv_min_port=49152"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "pasv_max_port=65534"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "port_enable=YES"
-# >  /etc/vsftp/user_list # clear it out
-# setsebool -P ftp_home_dir 1  # allow ftp users to change into their home directories
-# setsebool -P allow_ftpd_full_access 1 # ONLY IF YOU CHROOT JAIL YOUR USERS. PLEASE TEST BEFORE ENABLING.
-# TODO: Research if ftp_home_dir + chcon -t public_content_rw_t + allow_httpd_anon_write 
-# # TODO: interactively add any users named "ftpSomething"
-# >> $modfile echo "# $modflag"
-# >> $modfile echo "userlist_deny=NO"
-# >> /etc/sysconfig/iptables-config echo "# $modflag"
-# >> /etc/sysconfig/iptables-config echo 'IPTABLES_MODULES="ip_conntrack_ftp"'
-# Also: interactively add any existing ftp users
-# REFERENCES:
-# - https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Managing_Confined_Services/sect-Managing_Confined_Services-File_Transfer_Protocol-Configuration_Examples.html
 
+ui_section "FTP: Configure vsftpd"
+
+modflag="configure_server directive 3.15B FTP Server"
+modfile="/etc/vsftpd/vsftpd.conf"
+
+if [ 0 '<' "$(grep --count "$modflag" "$modfile")" ]; then
+
+  ui_print_note "vsftpd is already installed and configured. Nothing to do."
+
+else
+
+  source <(
+    ui_prompt_macro "vsftpd is not configured yet. Configure it? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    
+    ui_print_note "OK, no changes made."
+
+  else
+
+    ui_print_note "OK, appending secure configuration"
+
+    source <(
+      ui_prompt_macro "Enter desired public IP address for PASV transfer? [$PUBLIC_IP_ADDRESS]" PUBLIC_IP_ADDRESS "$(fn_get_public_ip)"
+    )
+
+    # Support yes | script idiom
+    if [ "$PUBLIC_IP_ADDRESS" == "y" ]; then
+      # Reset, again
+      PUBLIC_IP_ADDRESS="$(fn_get_public_ip)"
+    fi
+
+    # Append new settings to the config, after replacing some stuff
+    >> "$modfile" (
+      # Replace tags and add modflag to sample file
+      cat "$LIB_DIR"/samples/vsftpd.conf \
+      | sed 'i\\n# '$modflag \
+      | sed 's/__PUBLIC_IP_ADDRESS__/'$PUBLIC_IP_ADDRESS
+    )
+
+    # Clear out user_list
+    > /etc/vsftp/user_list 
+    # TODO: interactively enter probable FTP users
+
+  fi
+fi
+
+ui_section "FTP: Configure selinux and kernel for vsftpd"
+
+modflag="configure_server directive 3.15C FTP Server"
+modfile="/etc/vsftpd/vsftpd.conf"
+
+source <(
+  ui_prompt_macro "Ensure that proper system settings are enabled for ftp to function? [y/N]" proceed n
+)
+
+if [ "$proceed" != "y" ]; then
+  
+  ui_print_note "OK, no changes made."
+
+else
+
+  ui_start_task "Update SELinux to allow FTP access"
+
+  ui_print_note "Allowing access from vsftp to server directories..."
+  # allow ftp users to change into their home directories
+  setsebool -P ftp_home_dir 1
+  # ONLY IF YOU CHROOT JAIL YOUR USERS. PLEASE TEST BEFORE ENABLING.
+  # Allows FTP full acces within its directory, provided user:groups are correct
+  setsebool -P allow_ftpd_full_access 1
+
+  ui_print_note "Triggering autorelabel at next reboot..."
+  touch /.autorelabel
+
+  ui_end_task "Update SELinux to allow FTP access"
+
+  ui_print_note "WARNING. You must reset before selinux changes will take effect."
+
+  # Update kernel
+  ui_start_task "Update kernel to allow FTP access"
+
+  ui_print_note "Adding ip_conntrack_ftp module..."
+  >> /etc/sysconfig/iptables-config echo "# $modflag"
+  >> /etc/sysconfig/iptables-config echo 'IPTABLES_MODULES="ip_conntrack_ftp"'
+
+  ui_end_task "Update kernel to allow FTP access"
+
+fi
+
+# TODO: Research if ftp_home_dir + chcon -t public_content_rw_t + allow_httpd_anon_write 
+# TODO: interactively add any users named "ftpSomething"
 # POSTFIX 3.11.6
-echo
-echo "------------------------------"
-echo "-- Email configuration (postfix)"
-echo "------------------------------"
+ui_section "Email configuration (postfix)"
+
 modfile=""
 modflag="configure_server directive 3.11.6"
 installpkg="postfix"
-echo "Checking if $installpkg is installed..."
+ui_start_task "Check if $installpkg is installed."
 yum list installed \
 | grep postfix\\. \
   > "$SCRATCH"
-if [ ! -s $SCRATCH ]; then
-  echo "$installpkg may not be installed. Install it? [y/N]"
-  read proceed
-  if [[ $proceed == "y" ]]; then
-    echo "OK, installing."
+ui_end_task "Check if $installpkg is installed"
+
+if [ -s $SCRATCH ]; then
+  ui_print_note "$installpkg is already installed. Nothing to do."
+else
+  source <(
+    ui_prompt_macro "$installpkg may not be installed. Install it? [y/N]" proceed n
+  )
+
+  if [ "$proceed" != "y" ]; then
+    ui_print_note "OK, no changes made."
+  else
+    ui_print_note "OK, installing."
+
     yum --assumeyes install $installpkg
+
     (( ++ACTIONS_COUNTER ))
     >> "$ACTIONS_TAKEN_FILE" echo $modflag
+
     # Append to undo file
     >> $UNDO_FILE echo "echo 'Removing installation of $installpkg...' "
     >> $UNDO_FILE echo "yum --assumeyes remove $installpkg"
-    echo "Wrote undo file."
-  else
-    echo "OK, no changes made."
+    ui_print_note "Wrote undo file."
   fi
-else
-  echo "$installpkg is already installed."
 fi
 
 # # POSTFIX 3.11.6
@@ -2440,8 +2523,10 @@ fi
 # chgrp -R apache /etc/httpd/conf
 # # make sure that /srv is httpd_sys_content_t
 # # make sure that site dirs are httpd_sys_content_rw_t
+# TODO: block DS_Store files from Apache
+# - cf http://www.intego.com/mac-security-blog/possible-security-issue-involving-ds_store-files-on-web-servers/
 
-# TODO: monitoring systems (fwsnort, psad, fail2ban, nagios)
+# TODO: monitoring systems (psad, fail2ban, nagios)
 # yum --assumeyes install gcc perl perl-CPAN
 #*psad:
 # cd /opt && wget http://cipherdyne.com/psad/download/psad-2.2.3.tar.gz
@@ -2492,7 +2577,7 @@ fi
 # mysql:
 # yum --assumeyes install mysql{,-{common,libs,server}} php-mysql
 # Remember to set root password:
-# mysql> UPDATE mysql.user SET Password = PASSWORD(']Lm!s4u.2DK*&zsA>/Jh=bSS3') WHERE User='root';
+# mysql> UPDATE mysql.user SET Password = PASSWORD('...') WHERE User='root';
 # Also, clear out anonymous users:
 # mysql> DELETE FROM mysql.user WHERE User='';
 # mysql> FLUSH PRIVILEGES;
@@ -2503,20 +2588,33 @@ fi
 
 # sysrq:
 # -- ask whether to enable kernel.sysrq in sysctl.conf
+# merge in these:
+####    # Turn on execshield
+####    kernel.exec-shield=1
+####    kernel.randomize_va_space=1
+####    # Enable IP spoofing protection
+####    net.ipv4.conf.all.rp_filter=1
+####    # Disable IP source routing
+####    net.ipv4.conf.all.accept_source_route=0
+####    # Ignoring broadcasts request
+####    net.ipv4.icmp_echo_ignore_broadcasts=1
+####    net.ipv4.icmp_ignore_bogus_error_messages=1
+####    # Make sure spoofed packets get logged
+####    net.ipv4.conf.all.log_martians = 1
 
 # That's All Folks
 
-echo "------------------------------"
-echo "-- Conclusion"
-echo "------------------------------"
-echo "- Actions Taken: $ACTIONS_COUNTER "
-echo "- Actions Log: Press any key..."
-read proceed
-cat "$ACTIONS_TAKEN_FILE" | nl | sed 's/.*/* \0/'
-echo "- END OF ACTIONS TAKEN FILE"
+ui_section "Conclusion"
+ui_print_note "Actions Taken: $ACTIONS_COUNTER "
+
+ui_start_task "Actions Log"
+cat "$ACTIONS_TAKEN_FILE" | nl | ui_print_list
+ui_end_task "Actions Log"
+
 echo
-echo "Please see $UNDO_FILE for ability to revert most of the changes we have made."
+ui_print_note "Please see $UNDO_FILE for ability to revert most of the changes we have made."
 echo "-- press any key to end --"
 read proceed
 
+# Made it
 exit 0
