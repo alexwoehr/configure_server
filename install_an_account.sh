@@ -69,7 +69,7 @@ main() {
   # Mode for Conflict Resolution
   ui_section "Setup Options: Resolution of Conflicts"
 
-  ui_print_note "There are three possible options for handling conflicts:"
+  ui_print_note "There are five possible options for handling conflicts:"
 
   ui_print_list <<-END_LIST
 	safe: do not create a resource at all if it conflicts with an existing archive or resource.
