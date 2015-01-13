@@ -10,6 +10,10 @@
 # - $ACCOUNT_PKG: Path to the file that you are unpacking
 # - $ENCRYPTION_KEY: key to encrypt / decrypt the archive
 
+# TODO:
+# - [ ] Should automatically augment the appropriate VCL and Apache statements.
+# - [ ] Should automatically generate mysql user accounts
+
 ###########################
 #
 # Variables and Global Imports
@@ -442,6 +446,34 @@ install_archive_apache() {
   local CP_CMD="cp -r '$ACCOUNT_DIR'/srv/'$ACCOUNT'/* srv/'$ACCOUNT'/"
   install_archive_resolve_conflict "$CONFLICT_MODE" "$CP_CMD" srv/"$ACCOUNT"/
 
+  # bind-mount into /var/log (since logs may be separate partition)
+  if [ -d srv/"$ACCOUNT"/logs ]; then
+    # Step 1: verify whether to continue
+    source <(
+      ui_prompt_macro "Logs detected. Should we bind mount them into /var/log/sites? [Y/n]" proceed "y"
+    )
+
+    if [[ $proceed != "y" ]]; then
+      ui_print_note "OK, bind-mount skipped"
+    else
+      ui_print_note "OK, bind-mounting from account into /var/log directory..."
+
+      # Step 2: ensure that /var/log/sites exists
+      mkdir --parents var/log/sites
+
+      # Step 3: move contents to new destination
+      # TODO: incorporate conflict mode
+      mv srv/"$ACCOUNT"/logs var/log/sites/"$ACCOUNT"
+
+      # Step 4: bind mount into log partition
+      mkdir --parents srv/"$ACCOUNT"/logs
+      mount --bind var/log/sites/"$ACCOUNT" srv/"$ACCOUNT"/logs
+      
+      # Step 4: ensure that new mount loads when server restarts
+      # TODO
+    fi
+  fi
+
   # Install configuration
   mkdir --parents etc/httpd/sites/"$ACCOUNT"/
   CP_CMD="cp -rv '$ACCOUNT_DIR'/httpd/sites/$ACCOUNT/* etc/httpd/sites/'$ACCOUNT'/"
@@ -557,7 +589,9 @@ install_archive_mysql() {
   # TODO: use different users other than mysql root
   ui_press_any_key
 
+  # Find possible mysql database files, then confirm which ones to load.
   local db_filepath
+
   for db_filepath in $(find "$ACCOUNT_DIR"/mysql -type f -name '*.sql'); do
 
     # This if statement makes sure the file exists.
@@ -572,6 +606,7 @@ install_archive_mysql() {
     # Determine how to proceed based on conflict mode.
 
     # Create the database
+    # TODO: need to incorporate conflict modes into this.
     source <(
       ui_prompt_macro "Okay to create mysql database $db from file $db_filename?" proceed n
     )
@@ -584,9 +619,19 @@ install_archive_mysql() {
       ui_print_note "Enter your mysql root password:"
 
       # Ensure the database is there
-      echo "CREATE DATABASE \`$db\` ;" | $CHROOT_CMD mysql -B -u root -p  2>&1
+      if [[ $CONFLICT_MODE == "clean" ]]; then
+        # TODO: should drop all databases from the account.
+        echo "DROP DATABASE IF EXISTS \`$db\` ;" | $CHROOT_CMD mysql -B -u root -p  2>&1
+        echo "CREATE DATABASE \`$db\` ;" | $CHROOT_CMD mysql -B -u root -p  2>&1
+      elif [[ $CONFLICT_MODE == "merge" ]]; then
+        echo "CREATE DATABASE \`$db\` ;" | $CHROOT_CMD mysql -B -u root -p  2>&1
+      elif [[ $CONFLICT_MODE == "add" ]]; then
+        :
+      fi
 
       # Populate the database
+      # TODO: need to incorporate conflict modes into this.
+      # Should strip out "if exists", and completely skip this if database in question already exists.
       $CHROOT_CMD mysql -B -u root -p "$db" < "$db_filepath"
 
       ui_print_note "Finished with database $db."
