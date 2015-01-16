@@ -61,10 +61,10 @@ fn_get_user_login() {
 }
 
 # Check if a group exists
-# Empty if no group, otherwise returns name of group
+# Empty string if no group, otherwise returns name of group
 fn_does_group_exist_yn() {
   local groupName="$1"
-  grep "^$groupName:" /etc/group \
+  getent group "$groupName" \
   | cut --fields=1 --delimiter=':'
 }
 
