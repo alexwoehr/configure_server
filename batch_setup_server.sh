@@ -6,9 +6,23 @@
 source ./ui.inc
 source ./functions.inc
 
+# Procure commandline arguments
+
 if [[ -z $1 ]]; then
-  echo "No host found."
-  echo "Aborting..."
+
+  cat <<END
+
+Invocation error: no host specified.
+
+Usage: $0 <host> <root password on server>
+
+Example: ssh-add ec2.pem && $0 ec2-user@MyAmazonHost SuperSecretRootPassword
+
+Error Message: Please specify a host to setup.
+
+END
+
+  echo -e "Aborting...\n"
   exit 99
 fi
 
@@ -23,7 +37,7 @@ fi
 ROOT_PASSWORD="$2"
 
 # We have to go superuser because sudo -s doesn't work with a tty.
-SSH_CMD="ssh ec2-user@$HOST su root"
+SSH_CMD="ssh $HOST su root"
 
 #######################################
 # Update and restart
