@@ -6,6 +6,59 @@
 source ./ui.inc
 source ./functions.inc
 
+# Our functions
+# Test if ec2-tools appears to be installed and usable
+test_ec2_tools() {
+  local readonly ec2_reboot_instances="$(which ec2-reboot-instances)"
+  if [[ -n $ec2_reboot_instances ]]; then
+    echo "y"
+  else
+    echo ""
+  fi
+}
+
+# Prompt the user to reboot
+ask_reboot() {
+  # Determine if we can reboot
+  local ec2_reboot_possible="maybe"
+
+  # Following conditions must be true to reboot.
+  # 1. Is the tool installed?
+  local readonly ec2_tools_available="$(test_ec2_tools)"
+  if [[ -z $ec2_tools_available ]]; then
+    ui_print_note "ec2-reboot-instances was not found in the path. \$PATH is $PATH."
+    ec2_reboot_possible=""
+  else
+    ui_print_note "Found ec2-reboot-instances."
+  fi
+
+  # 2. Were the proper API keys supplied?
+  if [[ -z $AMAZON_ACCESS_KEY_ID -o -z $AMAZON_SECRET_ACCESS_KEY ]]; then
+    ui_print_note "Amazon credentials not supplied."
+    ec2_reboot_possible=""
+  else
+    ui_print_note "Found Amazon credentials."
+  fi
+
+  # 3. Do we have the instance id?
+  if [[ -z $AMAZON_INSTANCE_ID ]]; then
+    ui_print_note "Found Amazon instance id."
+    ec2_reboot_possible=""
+  else
+    ui_print_note "No Amazon instance id was found."
+  fi
+
+  if [[ -z $ec2_reboot_possible ]]; then
+    ui_print_note "Major system actions have been performed, but automatic reboot is not possible."
+    ui_print_note "You may want to reboot the instance yourself to keep it in a consistent state."
+  else
+    ec2_reboot_possible="y"
+    readonly ec2_reboot_possible
+    # TODO: Reboot the instance using ec2
+  fi
+
+}
+
 # Procure commandline arguments
 
 if [[ -z $1 ]]; then
@@ -59,7 +112,7 @@ if [[ $proceed == "y" ]]; then
 	yum --assumeyes update
 	END_CMDS
 
-  ui_print_note "Done. Please restart from AWS console."
+  ui_print_note "Done."
 
   ui_end_task "Updating $HOST"
 
