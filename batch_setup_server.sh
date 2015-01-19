@@ -41,6 +41,8 @@ SSH_CMD="ssh $HOST su root"
 
 #######################################
 # Update and restart
+# - Install any critical security updates
+#   since the machine image was created.
 ui_section "Installing updates since initial server image"
 
 source <(
