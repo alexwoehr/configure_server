@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 # TODO:
-# * IMPORTANT: does not yet add /dev and /proc mounts to the chroot dir
 # * Add --remove option. It's complicated to remove a chroot, unfortunately.
 # * Compare against script at http://www.linuxfocus.org/common/src/article225/Config_Chroot.pl.txt (see http://www.linuxfocus.org/English/January2002/article225.shtml)
 # * Research SELinux and chroot, SELinux and loop
@@ -16,7 +15,43 @@ source ./setup_vars.sh \
   || (echo "Cannot find setup_vars.sh. Exiting..." && exit 3)
 
 
-readonly pkg_base_download="http://mirror.centos.org/centos/6/os/x86_64/Packages/centos-release-6-5.el6.centos.11.1.x86_64.rpm"
+##
+## FUNCTIONS
+##
+
+# Function to run rpm locally
+rpm_local() {
+  rpm --root="$CHROOT_JAIL_DIR" "$@"
+}
+
+# Function to run yum locally
+yum_localized() {
+  yum --installroot="$CHROOT_JAIL_DIR" "$@"
+}
+
+# Function to run yum chrooted
+yum_chrooted() {
+  chroot "$CHROOT_JAIL_DIR" yum "$@"
+}
+
+# Extracts centos release from repository html (*winces*)
+# and returns in stdout
+stream_extract_centos_release_name() {
+  tr '"' "\n" \
+  | tr --delete --complement $'\n0-9A-Za-z._-' \
+  | grep "^$CENTOS_RELEASE_PATTERN$"
+}
+
+##
+## VARIABLES
+##
+
+readonly CENTOS_RELEASE_DIR='http://mirror.centos.org/centos/6.6/os/x86_64/Packages'
+readonly CENTOS_RELEASE_KEY='http://mirror.centos.org/centos/6.6/os/x86_64/RPM-GPG-KEY-CentOS-6'
+readonly CENTOS_RELEASE_PATTERN='centos-release-6-6.el6.centos.*.x86_64.rpm'
+
+readonly DEFAULT_CHROOT_SIZE_MEGABYTES=8000
+declare -i DEFAULT_CHROOT_SIZE_MEGABYTES
 
 if [[ -z $1 ]]; then
   ui_print_note "You must supply the name of the new chroot to create."
@@ -36,22 +71,27 @@ readonly CHROOT_LOOP_FILE=/chroot/Loops/"$CHROOT_NAME".loop
 # User that owns the chroot
 readonly CHROOT_USER=chroot_"$CHROOT_NAME"
 
-# User that owns the chroot
+# Group that owns the chroot
 readonly CHROOT_GROUP=chroot_group
 
 # Packages to install
-readonly PACKAGES="rpm-build yum initscripts"
+readonly PACKAGES="yum rpm rpm-build initscripts"
+
+##
+## OPERATION
+##
 
 ui_start_task "Dependencies"
 
-yum --assumeyes install e2fsprogs
+yum --assumeyes install e2fsprogs curl wget pv
 
 ui_end_task "Dependencies"
 
 ui_start_task "Create chroot loop partition"
 
-ui_print_note "Creating Loops directory..."
-mkdir --parents "$CHROOT_JAIL_DIR"/Loops
+ui_print_note "Creating Loop filesystem..."
+
+mkdir --parents/chroot/Loops
 
 if [[ -e "$CHROOT_LOOP_FILE" ]]; then
   ui_print_note "Partition was detected. Nothing to do."
@@ -63,16 +103,15 @@ else
   # Use DD and PV so you can keep tabs on progress
   if [[ -z $CHROOT_SIZE_MEGABYTES ]]; then
     source <(
-      ui_prompt_macro "How many MB should the new chroot be? [8000]" CHROOT_SIZE_MEGABYTES 8000
+      ui_prompt_macro "How many MB should the new chroot be? [$DEFAULT_CHROOT_SIZE_MEGABYTES]" CHROOT_SIZE_MEGABYTES "$DEFAULT_CHROOT_SIZE_MEGABYTES"
     )
 
     # Ensure that "yes | $0" idiom works: y is always a normal answer.
     if [[ $CHROOT_SIZE_MEGABYTES == "y" ]]; then
-      CHROOT_SIZE_MEGABYTES="8000"
+      CHROOT_SIZE_MEGABYTES="$DEFAULT_CHROOT_SIZE_MEGABYTES"
     fi
   fi
 
-  # TODO: Could determine ideal BS size using tool
   dd bs=1M count="$CHROOT_SIZE_MEGABYTES" if=/dev/zero | pv -s "$CHROOT_SIZE_MEGABYTES"M > "$CHROOT_LOOP_FILE"
 fi
 
@@ -87,7 +126,7 @@ ui_end_task "Create chroot jail directory"
 ui_start_task "Create chroot file system"
 
 # Mount the loop file
-if [[ $(mount | grep --fixed-strings "$CHROOT_JAIL_DIR" | wc -l) != 0 ]]; then
+if [[ $(mount | grep --fixed-strings "$CHROOT_JAIL_DIR on " | wc -l) != 0 ]]; then
   ui_print_note "Mount point was detected. Not safe to mess with existing sytem."
 else
 
@@ -127,53 +166,78 @@ END_FSTAB_ENTRY
   fi
 fi
 
-
 ui_end_task "Create chroot file system"
 
 ui_start_task "Setup rpm base"
 
-mkdir --parents "$CHROOT_JAIL_DIR"/var/lib/rpm
+rpm_local --rebuilddb
+rpm_local --import "$CENTOS_RELEASE_KEY"
 
-rpm --rebuilddb --root="$CHROOT_JAIL_DIR"
 
-# Subshell
-(
-  cd "$TMP_DIR"
-  wget "$pkg_base_download"
-  rpm -i --root=/var/tmp/chroot --nodeps "${pkg_base_download##*/}"
-)
+# Setup package database within container
+
+# - Search for needed repolist in the mirror and pull it.
+#   This could fail and get dicey. Final slash is important, too.
+curl --silent "$CENTOS_RELEASE_DIR"/ \
+| stream_extract_centos_release_name \
+| xargs -I% wget --quiet "$CENTOS_RELEASE_DIR"/%
+
+# - Install repolist
+#   NOTE: pattern intentionally left unquoted
+rpm_local --install --nodeps ./$CENTOS_RELEASE_PATTERN
+rm ./$CENTOS_RELEASE_PATTERN
 
 ui_end_task "Setup rpm base"
 
 ui_start_task "Install all core packages"
 
 # unquoted variable expands to multiple words
-yum --installroot="$CHROOT_JAIL_DIR" install --assumeyes $PACKAGES \
-  | ui_escape_output "yum"
+yum_localized --config=<( echo "[main]" ) --assumeyes install $PACKAGES \
+| ui_escape_output "yum"
 
 # Copy over the repos
 source <(
-  ui_prompt_macro "Copy your current repos into the chroot? [y/N]" proceed n
+  ui_prompt_macro "Copy your additional repos into the chroot? [y/N]" proceed n
 )
 if [[ $proceed != "y" ]]; then
   ui_print_note "OK, no action taken."
 else
-  cp -rf /etc/yum.repos.d/ "$CHROOT_JAIL_DIR"/etc
-  ui_print_note "Copied repos."
+  # Omit amazon repos, since this is a CentOS build script!
+  ls -d /etc/yum.repos.d/*.repo \
+  | grep -v /amzn- \
+  | xargs -I% cp % "$CHROOT_JAIL_DIR"/etc/yum.repos.d
+
+  ui_start_task "Updating yum..."
+
+  yum_chrooted --assumeyes clean all \
+  && yum_chrooted --assumeyes update \
+     | ui_escape_output "yum"
+
+  ui_end_task "Updating yum..."
+
+  ui_print_note "Copied extra repos."
 fi
 
 ui_end_task "Install all core packages"
 
-ui_start_task "Setup remaining inner directories"
+ui_start_task "Setup root skeleton"
 
-cp "$CHROOT_JAIL_DIR"{/etc/skel/.??*,/root}
+cp -v "$CHROOT_JAIL_DIR"{/etc/skel/.??*,/root}
+
+ui_end_task "Setup root skeleton"
+
+ui_start_task "Bind directories"
 
 # Special directories
 mount --bind /proc "$CHROOT_JAIL_DIR"/proc
 mount --bind /dev "$CHROOT_JAIL_DIR"/dev
 
+ui_end_task "Bind directories"
+
+ui_start_task "Network files and other important directories"
+
 # Network DNS resolution
-cp {,"$CHROOT_JAIL_DIR"}/etc/resolv.conf
+cp -v {,"$CHROOT_JAIL_DIR"}/etc/resolv.conf
 
 mkdir  --parents    "$CHROOT_JAIL_DIR"/var/run
 mkdir  --parents    "$CHROOT_JAIL_DIR"/home/httpd
@@ -183,6 +247,10 @@ chmod  1777         "$CHROOT_JAIL_DIR"/tmp
 chown --recursive   root:root "$CHROOT_JAIL_DIR"/var/run
 # mkdir  --parents    "$CHROOT_JAIL_DIR"/var/lib/php/session
 # chown root:apache   "$CHROOT_JAIL_DIR"/var/lib/php/session
+
+ui_end_task "Network files and other important directories"
+
+ui_start_task "User / group setup"
 
 # Setup user on CHROOT jail
 if getent group $CHROOT_GROUP; then
@@ -202,7 +270,10 @@ for dir in home root; do
   chown -R $CHROOT_USER:$CHROOT_USER "$CHROOT_JAIL_DIR"/$dir
 done
 
-# Copy important etc configuration
+ui_start_task "User / group setup"
+
+ui_start_task "Copy important etc configuration"
+
 # From link: http://www.cyberciti.biz/faq/howto-run-nginx-in-a-chroot-jail/
 cp -fv /etc/{prelink.cache,services,adjtime,shells,hosts.deny,localtime,nsswitch.conf,nscd.conf,prelink.conf,protocols,hosts,ld.so.cache,ld.so.conf,resolv.conf,host.conf} "$CHROOT_JAIL_DIR"/etc
 
@@ -220,17 +291,16 @@ fi
 
 # Move list of users over
 # passwd is tricky...only copy users that are needed in the chroot
-grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/passwd >> "$CHROOT_JAIL_DIR"/etc/passwd
-grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/shadow >> "$CHROOT_JAIL_DIR"/etc/shadow
-grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/group  >> "$CHROOT_JAIL_DIR"/etc/group
+for pwdfile in passwd shadow group; do
+  grep -Fe root -e "$CHROOT_NAME" -e "$CHROOT_USER" /etc/"$pwdfile" >> "$CHROOT_JAIL_DIR"/etc/"$pwdfile"
+done
 
 # Setup SELinux permissions
 # APACHE only
 ui_print_note "Setting up selinux permissions."
 ####    apache: # setsebool httpd_disable_trans 1
 
-ui_end_task "Setup remaining inner directories"
-
+ui_end_task "Copy important etc configuration"
 
 ui_print_note "Setup is finished."
 ui_print_note "Now you should be able to chroot into the new system and complete any remaining setup by using the following command:"
