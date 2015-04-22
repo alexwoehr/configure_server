@@ -20,8 +20,13 @@ source ./setup_vars.sh \
 ##
 
 # Function to run rpm locally
-rpm_local() {
+rpm_localized() {
   rpm --root="$CHROOT_JAIL_DIR" "$@"
+}
+
+# Function to run rpm in chroot
+rpm_chrooted() {
+  chroot "$CHROOT_JAIL_DIR" rpm "$@"
 }
 
 # Function to run yum locally
@@ -132,7 +137,7 @@ else
 
   # Create filesystem in the loop file
   mkfs.ext4 -F "$CHROOT_LOOP_FILE"
- 
+
   # It's not mounted yet.
   # Need to mount it.
   source <(
@@ -170,8 +175,8 @@ ui_end_task "Create chroot file system"
 
 ui_start_task "Setup rpm base"
 
-rpm_local --rebuilddb
-rpm_local --import "$CENTOS_RELEASE_KEY"
+rpm_localized --rebuilddb
+rpm_localized --import "$CENTOS_RELEASE_KEY"
 
 
 # Setup package database within container
@@ -184,7 +189,7 @@ curl --silent "$CENTOS_RELEASE_DIR"/ \
 
 # - Install repolist
 #   NOTE: pattern intentionally left unquoted
-rpm_local --install --nodeps ./$CENTOS_RELEASE_PATTERN
+rpm_localized --install ./$CENTOS_RELEASE_PATTERN
 rm ./$CENTOS_RELEASE_PATTERN
 
 ui_end_task "Setup rpm base"
@@ -194,6 +199,10 @@ ui_start_task "Install all core packages"
 # unquoted variable expands to multiple words
 yum_localized --config=<( echo "[main]" ) --assumeyes install $PACKAGES \
 | ui_escape_output "yum"
+
+# Now we have to update the rpm database again.
+# Mainly because they switched from sqlite to Berkeley DB between 4.8 and 4.11.
+rpm_chrooted --rebuilddb
 
 # Copy over the repos
 source <(
