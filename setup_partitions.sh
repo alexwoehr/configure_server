@@ -176,7 +176,7 @@ if [ -s "$SCRATCH" ] && which "parted" ; then
         echo "* Action queued."
         if [[ $cmd == mktable* ]]; then
           # y and enter -- will cause a (benign) error if no confirmation necessary
-          >> "$SCRATCH"1 echo "y"
+          >> "$SCRATCH"1 echo "Yes"
           echo "* mktable command: Added 'y' to deal with potential confirmation."
         fi
       else
