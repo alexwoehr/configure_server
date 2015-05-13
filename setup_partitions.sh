@@ -174,6 +174,11 @@ if [ -s "$SCRATCH" ] && which "parted" ; then
         # Important: quit when we're done, so it doesn't hang. Also, final newline after quit is important!!
         >> "$SCRATCH"1 echo $cmd
         echo "* Action queued."
+        if [[ $cmd == mktable* ]]; then
+          # y and enter -- will cause a (benign) error if no confirmation necessary
+          >> "$SCRATCH"1 echo "y"
+          echo "* mktable command: Added 'y' to deal with potential confirmation."
+        fi
       else
         echo "* OK, command was ignored."
       fi
