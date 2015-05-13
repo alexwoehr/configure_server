@@ -114,9 +114,9 @@ yum list installed \
 | grep ^parted\\. \
   > $SCRATCH
 if [ ! -s "$SCRATCH" ] ; then
-  echo "Install parted? [y/N]"
+  echo "Install parted? [Y/n]"
   read proceed
-  if [ "y" == "$proceed" ] ; then
+  if [ "n" != "$proceed" ] ; then
     echo "Installing..."
 
     ( yum --assumeyes install parted \
@@ -149,9 +149,9 @@ yum list installed \
   > $SCRATCH
 if [ -s "$SCRATCH" ] && which "parted" ; then
   echo "parted command has been detected."
-  echo "Proceed to interactive parted session? [y/N]"
+  echo "Proceed to interactive parted session? [Y/n]"
   read proceed
-  if [ "y" == "$proceed" ]; then
+  if [ "n" != "$proceed" ]; then
     echo "NOTE: Undo capability is EXTREMELY limited. Press ^Z at any time to fix your mess."
     echo
     echo "* BEGIN INTERACTIVE COMMAND QUEUEING *"
@@ -167,10 +167,10 @@ if [ -s "$SCRATCH" ] && which "parted" ; then
       cmd=${cmd//_DEVICE_ROOT1_/$DEVICE_ROOT1}
       cmd=${cmd//_DEVICE_ROOT2_/$DEVICE_ROOT2}
       cmd=${cmd//_DEVICE_DATA1_/$DEVICE_DATA1}
-      echo "* Queue command below? [y/N]"
+      echo "* Queue command below? [Y/n]"
       echo "* $cmd"
       read proceed
-      if [ "y" == "$proceed" ]; then
+      if [ "n" != "$proceed" ]; then
         # Important: quit when we're done, so it doesn't hang. Also, final newline after quit is important!!
         >> "$SCRATCH"1 echo $cmd
         echo "* Action queued."
@@ -181,9 +181,9 @@ if [ -s "$SCRATCH" ] && which "parted" ; then
     >> "$SCRATCH"1 echo "quit"
     echo "* Full commands list below:"
     cat -A "$SCRATCH"1 | sed 's/.*/* [commands to run] \0/'
-    echo "* OK to proceed? [y/N]"
+    echo "* OK to proceed? [Y/n]"
     read proceed
-    if [ "y" == "$proceed" ]; then
+    if [ "n" != "$proceed" ]; then
       # Pass lines slowly into parted. Otherwise it gets backed up and throws a fit.
       cat "$SCRATCH"1 \
       | pv --quiet --line-mode --rate-limit 1 \
@@ -206,9 +206,9 @@ echo
 echo "------------------------------"
 echo "-- Build New Partitions & Replace Existing Directories"
 echo "------------------------------"
-echo "Build new partitions? [y/N]"
+echo "Build new partitions? [Y/n]"
 read proceed
-if [ "y" == "$proceed" ]; then
+if [ "n" != "$proceed" ]; then
   echo "NOTE: Undo capability is fairly limited. We are erasing and rebuilding filesystems."
   echo "Press ^C to abort NOW."
   echo "-- press any key to continue --"
@@ -228,10 +228,10 @@ if [ "y" == "$proceed" ]; then
     cmd=${cmd//_DEVICE_ROOT1_/$DEVICE_ROOT1}
     cmd=${cmd//_DEVICE_ROOT2_/$DEVICE_ROOT2}
     cmd=${cmd//_DEVICE_DATA1_/$DEVICE_DATA1}
-    echo "* Run command below? [y/N]"
+    echo "* Run command below? [Y/n]"
     echo "*" `echo $cmd | cat -A`
     read proceed
-    if [ "y" == "$proceed" ]; then
+    if [ "n" != "$proceed" ]; then
       eval "$cmd"
       made_changes="Y"
       echo "* Action performed."
