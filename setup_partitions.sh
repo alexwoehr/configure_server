@@ -174,11 +174,6 @@ if [ -s "$SCRATCH" ] && which "parted" ; then
         # Important: quit when we're done, so it doesn't hang. Also, final newline after quit is important!!
         >> "$SCRATCH"1 echo $cmd
         echo "* Action queued."
-        if [[ $cmd == mktable* ]]; then
-          # y and enter -- will cause a (benign) error if no confirmation necessary
-          >> "$SCRATCH"1 echo "Yes"
-          echo "* mktable command: Added 'y' to deal with potential confirmation."
-        fi
       else
         echo "* OK, command was ignored."
       fi
@@ -192,7 +187,7 @@ if [ -s "$SCRATCH" ] && which "parted" ; then
       # Pass lines slowly into parted. Otherwise it gets backed up and throws a fit.
       cat "$SCRATCH"1 \
       | pv --quiet --line-mode --rate-limit 1 \
-      | parted \
+      | parted -s \
       | sed 's/.*/* [parted says] \0/'
       echo "* OK, commands were executed."
     else
